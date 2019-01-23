@@ -219,7 +219,7 @@ namespace AssetStudio
 			ImportedFrame^ parent = frame;
 			while (parent != nullptr)
 			{
-				exportFrames->Add(parent->Name);
+				exportFrames->Add(parent->Path);
 				parent = parent->Parent;
 			}
 
@@ -229,12 +229,12 @@ namespace AssetStudio
 				for (int i = 0; i < boneList->Count; i++)
 				{
 					String^ boneName = boneList[i]->Path->Substring(boneList[i]->Path->LastIndexOf('/') + 1);
-					if (!exportFrames->Contains(boneName))
+					if (!exportFrames->Contains(boneList[i]->Path))
 					{
 						ImportedFrame^ boneParent = imported->RootFrame->FindFrameByPath(boneList[i]->Path);
 						while (boneParent != nullptr)
 						{
-							exportFrames->Add(boneParent->Name);
+							exportFrames->Add(boneParent->Path);
 							boneParent = boneParent->Parent;
 						}
 					}
@@ -275,7 +275,7 @@ namespace AssetStudio
 	void Fbx::Exporter::ExportFrame(FbxNode* pParentNode, ImportedFrame^ frame)
 	{
 		String^ frameName = frame->Name;
-		if ((frameNames == nullptr) || frameNames->Contains(frameName))
+		if ((frameNames == nullptr) || frameNames->Contains(frame->Path))
 		{
 			FbxNode* pFrameNode = NULL;
 			char* pName = NULL;
@@ -283,6 +283,7 @@ namespace AssetStudio
 			{
 				pName = StringToCharArray(frameName);
 				pFrameNode = FbxNode::Create(pScene, pName);
+				printf("%s", pFrameNode->GetName());
 			}
 			finally
 			{
@@ -335,6 +336,9 @@ namespace AssetStudio
 					pBoneNodeList->Add(lFrame);
 				}
 			}
+
+			FbxArray<FbxNode*> pSubMeshNodes;
+
 
 			for (int i = 0; i < meshList->SubmeshList->Count; i++)
 			{
@@ -415,7 +419,8 @@ namespace AssetStudio
 
 					FbxNode* pMeshNode = FbxNode::Create(pScene, pName);
 					pMeshNode->SetNodeAttribute(pMesh);
-					pFrameNode->AddChild(pMeshNode);
+					//pFrameNode->AddChild(pMeshNode);
+					pSubMeshNodes.Add(pMeshNode);
 
 					ImportedMaterial^ mat = ImportedHelpers::FindMaterial(meshObj->Material, imported->MaterialList);
 					if (mat != nullptr)
@@ -601,6 +606,34 @@ namespace AssetStudio
 					Marshal::FreeHGlobal((IntPtr)pName);
 				}
 			}
+
+			FbxNode* newNode = nullptr;
+
+			if (pSubMeshNodes.GetCount() > 1)
+			{
+
+				FbxGeometryConverter geomConverter(pSdkManager);
+				newNode = geomConverter.MergeMeshes(pSubMeshNodes, pFrameNode->GetName(), pScene);
+
+			}
+			else
+			{
+				newNode = pSubMeshNodes[0];
+				newNode->SetName(pFrameNode->GetName());
+			}
+
+			for (int i = 0; i < pFrameNode->GetChildCount(); ++i) {
+				newNode->AddChild(pFrameNode->GetChild(i));
+			}
+
+			int index = pMeshNodes->Find(pFrameNode);
+			pMeshNodes->RemoveAt(index);
+			pMeshNodes->InsertAt(index, newNode);
+
+			FbxNode* pParent = pFrameNode->GetParent();
+			pParent->RemoveChild(pFrameNode);
+			pParent->AddChild(newNode);
+
 		}
 		finally
 		{

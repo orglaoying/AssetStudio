@@ -117,6 +117,24 @@ namespace AssetStudio
                 }
             }
         }
+
+        public string Path
+        {
+            get
+            {
+                System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                var node = this;
+                sb.Append(node.Name);
+                node = node.Parent;
+                while (node != null)
+                {
+                    sb.Insert(0, "/");
+                    sb.Insert(0, node.Name);
+                    node = node.Parent;
+                }
+                return sb.ToString();
+            }
+        }
     }
 
     public class ImportedMesh
