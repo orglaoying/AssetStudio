@@ -380,7 +380,8 @@ namespace AssetStudio
                         }
                     }
                 }
-                else if (mesh.m_BindPose.Length > 0 && mesh.m_BoneNameHashes?.Length > 0 && mesh.m_BindPose.Length == mesh.m_BoneNameHashes.Length)
+
+                if ( (iMesh.BoneList==null || iMesh.BoneList.Count==0) &&  mesh.m_BindPose.Length > 0 && mesh.m_BoneNameHashes?.Length > 0 && mesh.m_BindPose.Length == mesh.m_BoneNameHashes.Length)
                 {
                     iMesh.BoneList = new List<ImportedBone>(mesh.m_BoneNameHashes.Length);
                     for (int i = 0; i < mesh.m_BoneNameHashes.Length; i++)
@@ -389,7 +390,10 @@ namespace AssetStudio
                         var boneHash = mesh.m_BoneNameHashes[i];
                         var path = GetPathFromHash(boneHash);
                         bone.Path = FixBonePath(path);
-                        if (!string.IsNullOrEmpty(bone.Path))
+                        if (string.IsNullOrEmpty(bone.Path))
+                        {
+                            bone.Path = mesh.m_Name + "_skin_" + i;
+                        }
                         {
                             var convert = Matrix4x4.Scale(new Vector3(-1, 1, 1));
                             bone.Matrix = convert * mesh.m_BindPose[i] * convert;

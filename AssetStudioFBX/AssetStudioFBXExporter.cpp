@@ -333,6 +333,10 @@ namespace AssetStudio
 				{
 					ImportedBone^ bone = boneList[i];
 					FbxNode* lFrame = FindNodeByPath(bone->Path, false);
+					if (lFrame == nullptr) {
+						//create a new
+						lFrame= CreateNodeByPath(bone->Path,false);
+					}
 					pBoneNodeList->Add(lFrame);
 				}
 			}
@@ -668,6 +672,43 @@ namespace AssetStudio
 				{
 					//throw gcnew Exception(gcnew String("Couldn't find path ") + path);
 					return NULL;
+				}
+				lNode = foundNode;
+			}
+			finally
+			{
+				Marshal::FreeHGlobal((IntPtr)pNodeName);
+			}
+		}
+		return lNode;
+	}
+
+	FbxNode* Fbx::Exporter::CreateNodeByPath(String ^ path, bool recursive)
+	{
+		array<String^>^ splitPath = path->Split('/');
+		FbxNode* lNode = pScene->GetRootNode();
+		for (int i = 0; i < splitPath->Length; i++)
+		{
+			String^ frameName = splitPath[i];
+			char* pNodeName = NULL;
+			try
+			{
+				pNodeName = StringToCharArray(frameName);
+				FbxNode* foundNode;
+				if (recursive && i == 0)
+				{
+					foundNode = lNode->FindChild(pNodeName);
+				}
+				else
+				{
+					foundNode = lNode->FindChild(pNodeName, false);
+				}
+				if (foundNode == NULL)
+				{
+					pNodeName = Fbx::StringToCharArray(frameName);
+					foundNode = FbxNode::Create(pScene, pNodeName);
+					lNode->AddChild(foundNode);
+					return foundNode;
 				}
 				lNode = foundNode;
 			}
