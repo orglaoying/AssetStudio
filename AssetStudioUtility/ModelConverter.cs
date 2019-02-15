@@ -392,7 +392,7 @@ namespace AssetStudio
                         bone.Path = FixBonePath(path);
                         if (string.IsNullOrEmpty(bone.Path))
                         {
-                            bone.Path = mesh.m_Name + "_skin_" + i;
+                            bone.Path = mesh.m_Name + "__skin__" + i;
                         }
                         {
                             var convert = Matrix4x4.Scale(new Vector3(-1, 1, 1));

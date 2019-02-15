@@ -231,12 +231,14 @@ namespace AssetStudio
 					String^ boneName = boneList[i]->Path->Substring(boneList[i]->Path->LastIndexOf('/') + 1);
 					if (!exportFrames->Contains(boneList[i]->Path))
 					{
-						ImportedFrame^ boneParent = imported->RootFrame->FindFrameByPath(boneList[i]->Path);
-						while (boneParent != nullptr)
-						{
-							exportFrames->Add(boneParent->Path);
-							boneParent = boneParent->Parent;
-						}
+						if (!boneList[i]->Path->Contains("__skin__")) {
+							ImportedFrame^ boneParent = imported->RootFrame->FindFrameByPath(boneList[i]->Path);
+							while (boneParent != nullptr)
+							{
+								exportFrames->Add(boneParent->Path);
+								boneParent = boneParent->Parent;
+							}
+						}						
 					}
 				}
 			}
