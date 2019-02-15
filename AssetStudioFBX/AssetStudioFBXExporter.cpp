@@ -181,7 +181,7 @@ namespace AssetStudio
 			FbxSkeleton* pJoint = FbxSkeleton::Create(pSdkManager, "");
 			pJoint->Size.Set((double)boneSize);
 			pJoint->SetSkeletonType(FbxSkeleton::eLimbNode);
-			pNode->SetNodeAttribute(pJoint);
+			pNode->AddNodeAttribute(pJoint);
 		}
 		else
 		{
@@ -191,7 +191,7 @@ namespace AssetStudio
 				pNull->Look.Set(FbxNull::eNone);
 			}
 
-			pNode->SetNodeAttribute(pNull);
+			pNode->AddNodeAttribute(pNull);
 		}
 
 		for (int i = 0; i < pNode->GetChildCount(); i++)
@@ -423,10 +423,12 @@ namespace AssetStudio
 						}
 					}
 
-					FbxNode* pMeshNode = FbxNode::Create(pScene, pName);
-					pMeshNode->SetNodeAttribute(pMesh);
+					pFrameNode->AddNodeAttribute(pMesh);
+					//FbxNode* pMeshNode = FbxNode::Create(pScene, pName);
+					//pMeshNode->SetNodeAttribute(pMesh);
+					//pSubMeshNodes.Add(pMeshNode);
+
 					//pFrameNode->AddChild(pMeshNode);
-					pSubMeshNodes.Add(pMeshNode);
 
 					ImportedMaterial^ mat = ImportedHelpers::FindMaterial(meshObj->Material, imported->MaterialList);
 					if (mat != nullptr)
@@ -484,7 +486,9 @@ namespace AssetStudio
 								foundMat = pMaterials->GetCount();
 								pMaterials->Add(pMat);
 							}
-							pMeshNode->AddMaterial(pMat);
+
+							//pMeshNode->AddMaterial(pMat);
+							pFrameNode->AddMaterial(pMat);
 
 							bool hasTexture = false;
 
@@ -518,7 +522,8 @@ namespace AssetStudio
 
 							if (hasTexture)
 							{
-								pMeshNode->SetShadingMode(FbxNode::eTextureShading);
+								//pMeshNode->SetShadingMode(FbxNode::eTextureShading);
+								pFrameNode->SetShadingMode(FbxNode::eTextureShading);
 							}
 						}
 						finally
@@ -574,7 +579,7 @@ namespace AssetStudio
 					if (hasBones)
 					{
 						FbxSkin* pSkin = FbxSkin::Create(pScene, "");
-						FbxAMatrix lMeshMatrix = pMeshNode->EvaluateGlobalTransform();
+						FbxAMatrix lMeshMatrix = pFrameNode->EvaluateGlobalTransform();// pMeshNode->EvaluateGlobalTransform();
 						for (int j = 0; j < boneList->Count; j++)
 						{
 							FbxCluster* pCluster = pClusterArray->GetAt(j);
@@ -613,14 +618,18 @@ namespace AssetStudio
 				}
 			}
 
-			FbxNode* newNode = nullptr;
+			/*FbxNode* newNode = nullptr;
 
 			if (pSubMeshNodes.GetCount() > 1)
 			{
 
 				FbxGeometryConverter geomConverter(pSdkManager);
 				newNode = geomConverter.MergeMeshes(pSubMeshNodes, pFrameNode->GetName(), pScene);
-
+				for (int i = 0; i < pSubMeshNodes.GetCount();++i) {
+					for (int j = 0; j < pSubMeshNodes[i]->GetMaterialCount(); ++j) {
+						newNode->AddMaterial(pSubMeshNodes[i]->GetMaterial(j));
+					}
+				}
 			}
 			else
 			{
@@ -638,7 +647,7 @@ namespace AssetStudio
 
 			FbxNode* pParent = pFrameNode->GetParent();
 			pParent->RemoveChild(pFrameNode);
-			pParent->AddChild(newNode);
+			pParent->AddChild(newNode);*/
 
 		}
 		finally
