@@ -19,6 +19,7 @@ namespace AssetStudio
 		Exporter^ exporter = gcnew Exporter(path, imported, allFrames, allBones, skins, boneSize, scaleFactor, versionIndex, isAscii, true);
 		exporter->ExportMorphs(imported, false, flatInbetween);
 		exporter->ExportAnimations(eulerFilter, filterPrecision, flatInbetween);
+		exporter->SkipRootNode();
 		exporter->pExporter->Export(exporter->pScene);
 		delete exporter;
 
@@ -39,6 +40,7 @@ namespace AssetStudio
 
 		Exporter^ exporter = gcnew Exporter(path, imported, false, true, skins, boneSize, scaleFactor, versionIndex, isAscii, false);
 		exporter->ExportMorphs(imported, morphMask, flatInbetween);
+		exporter->SkipRootNode();
 		exporter->pExporter->Export(exporter->pScene);
 		delete exporter;
 
@@ -111,6 +113,7 @@ namespace AssetStudio
 		}
 
 		pMeshNodes = imported->MeshList != nullptr ? new FbxArray<FbxNode*>(imported->MeshList->Count) : NULL;
+		
 		ExportFrame(pScene->GetRootNode(), imported->RootFrame);
 
 		if (imported->MeshList != nullptr)
@@ -197,6 +200,30 @@ namespace AssetStudio
 		for (int i = 0; i < pNode->GetChildCount(); i++)
 		{
 			SetJointsNode(pNode->GetChild(i), boneNames, allBones);
+		}
+	}
+
+	void Fbx::Exporter::SkipRootNode()
+	{
+		//check have single root
+		if (pScene->GetRootNode()->GetChildCount() == 1) {
+
+			FbxNode* pFrameRootNode = pScene->GetRootNode()->GetChild(0);
+
+			if (pFrameRootNode->GetChildCount() > 0) {
+
+				FbxArray<FbxNode*> chidren;
+
+				for (int i = 0; i < pFrameRootNode->GetChildCount(); ++i) {
+					chidren.Add(pFrameRootNode->GetChild(i));
+				}
+
+				for (int i = 0; i < chidren.GetCount(); ++i) {
+					pScene->GetRootNode()->AddChild(chidren[i]);
+				}
+
+				pScene->GetRootNode()->RemoveChild(pFrameRootNode);
+			}			
 		}
 	}
 
@@ -342,8 +369,6 @@ namespace AssetStudio
 					pBoneNodeList->Add(lFrame);
 				}
 			}
-
-			FbxArray<FbxNode*> pSubMeshNodes;
 
 
 			for (int i = 0; i < meshList->SubmeshList->Count; i++)

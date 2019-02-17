@@ -70,6 +70,7 @@ namespace AssetStudio {
 
 			void Exporter::LinkTexture(ImportedMaterialTexture^ texture, FbxFileTexture* pTexture, FbxProperty& prop);
 			void SetJointsNode(FbxNode* pNode, HashSet<String^>^ boneNames, bool allBones);
+			void SkipRootNode();
 			HashSet<String^>^ SearchHierarchy();
 			void SearchHierarchy(ImportedFrame^ frame, HashSet<String^>^ exportFrames);
 			void SetJointsFromImportedMeshes(bool allBones);
