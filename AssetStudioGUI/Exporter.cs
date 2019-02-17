@@ -321,7 +321,8 @@ namespace AssetStudioGUI
             var flatInbetween = (bool)Properties.Settings.Default["flatInbetween"];
             var fbxVersion = (int)Properties.Settings.Default["fbxVersion"];
             var fbxFormat = (int)Properties.Settings.Default["fbxFormat"];
-            ModelExporter.ExportFbx(exportPath, convert, eulerFilter, filterPrecision, allFrames, allBones, skins, boneSize, scaleFactor, flatInbetween, fbxVersion, fbxFormat == 1);
+            var mergeMesh = (bool)Properties.Settings.Default["mergeMesh"];
+            ModelExporter.ExportFbx(exportPath, convert, eulerFilter, filterPrecision, allFrames, allBones, skins, boneSize, scaleFactor, flatInbetween, fbxVersion, fbxFormat == 1,mergeMesh);
             return true;
         }
     }

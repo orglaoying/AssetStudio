@@ -250,5 +250,17 @@ namespace AssetStudioGUI.Properties {
                 this["scaleFactor"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool mergeMesh {
+            get {
+                return ((bool)(this["mergeMesh"]));
+            }
+            set {
+                this["mergeMesh"] = value;
+            }
+        }
     }
 }

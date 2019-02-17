@@ -47,8 +47,8 @@ namespace AssetStudio {
 		ref class Exporter
 		{
 		public:
-			static void Export(String^ path, IImported^ imported, bool eulerFilter, float filterPrecision, bool allFrames, bool allBones, bool skins, float boneSize, float scaleFactor, bool flatInbetween, int versionIndex, bool isAscii);
-			static void ExportMorph(String^ path, IImported^ imported, bool morphMask, bool flatInbetween, bool skins, float boneSize, float scaleFactor, int versionIndex, bool isAscii);
+			static void Export(String^ path, IImported^ imported, bool eulerFilter, float filterPrecision, bool allFrames, bool allBones, bool skins, float boneSize, float scaleFactor, bool flatInbetween, int versionIndex, bool isAscii,bool mergeMesh);
+			static void ExportMorph(String^ path, IImported^ imported, bool morphMask, bool flatInbetween, bool skins, float boneSize, float scaleFactor, int versionIndex, bool isAscii, bool mergeMesh);
 
 		private:
 			HashSet<String^>^ frameNames;
@@ -65,7 +65,7 @@ namespace AssetStudio {
 			FbxArray<FbxFileTexture*>* pTextures;
 			FbxArray<FbxNode*>* pMeshNodes;
 
-			Exporter(String^ path, IImported^ imported, bool allFrames, bool allBones, bool skins, float boneSize, float scaleFactor, int versionIndex, bool isAscii, bool normals);
+			Exporter(String^ path, IImported^ imported, bool allFrames, bool allBones, bool skins, float boneSize, float scaleFactor, int versionIndex, bool isAscii, bool normals, bool mergeMesh);
 			~Exporter();
 
 			void Exporter::LinkTexture(ImportedMaterialTexture^ texture, FbxFileTexture* pTexture, FbxProperty& prop);
@@ -76,6 +76,7 @@ namespace AssetStudio {
 			void SetJointsFromImportedMeshes(bool allBones);
 			void ExportFrame(FbxNode* pParentNode, ImportedFrame^ frame);
 			void ExportMesh(FbxNode* pFrameNode, ImportedMesh^ meshList, bool normals);
+			void ExportMeshMerge(FbxNode* pFrameNode, ImportedMesh^ meshList, bool normals);
 			FbxNode* FindNodeByPath(String ^ path, bool recursive);
 			FbxNode* CreateNodeByPath(String ^ path, bool recursive);
 			FbxFileTexture* ExportTexture(ImportedTexture^ matTex);

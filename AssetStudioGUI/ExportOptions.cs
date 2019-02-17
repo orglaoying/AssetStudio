@@ -36,6 +36,7 @@ namespace AssetStudioGUI
             flatInbetween.Checked = (bool)Properties.Settings.Default["flatInbetween"];
             fbxVersion.SelectedIndex = (int)Properties.Settings.Default["fbxVersion"];
             fbxFormat.SelectedIndex = (int)Properties.Settings.Default["fbxFormat"];
+            mergeMesh.Checked = (bool)Properties.Settings.Default["mergeMesh"];
         }
 
         private void exportOpnions_CheckedChanged(object sender, EventArgs e)
@@ -66,6 +67,7 @@ namespace AssetStudioGUI
             Properties.Settings.Default["flatInbetween"] = flatInbetween.Checked;
             Properties.Settings.Default["fbxVersion"] = fbxVersion.SelectedIndex;
             Properties.Settings.Default["fbxFormat"] = fbxFormat.SelectedIndex;
+            Properties.Settings.Default["mergeMesh"] = mergeMesh.Checked;
             Properties.Settings.Default.Save();
             DialogResult = DialogResult.OK;
             Close();

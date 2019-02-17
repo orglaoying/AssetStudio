@@ -4,7 +4,7 @@
 
 namespace AssetStudio
 {
-	void Fbx::Exporter::Export(String^ path, IImported^ imported, bool eulerFilter, float filterPrecision, bool allFrames, bool allBones, bool skins, float boneSize, float scaleFactor, bool flatInbetween, int versionIndex, bool isAscii)
+	void Fbx::Exporter::Export(String^ path, IImported^ imported, bool eulerFilter, float filterPrecision, bool allFrames, bool allBones, bool skins, float boneSize, float scaleFactor, bool flatInbetween, int versionIndex, bool isAscii, bool mergeMesh)
 	{
 		FileInfo^ file = gcnew FileInfo(path);
 		DirectoryInfo^ dir = file->Directory;
@@ -16,7 +16,7 @@ namespace AssetStudio
 		Directory::SetCurrentDirectory(dir->FullName);
 		path = Path::GetFileName(path);
 
-		Exporter^ exporter = gcnew Exporter(path, imported, allFrames, allBones, skins, boneSize, scaleFactor, versionIndex, isAscii, true);
+		Exporter^ exporter = gcnew Exporter(path, imported, allFrames, allBones, skins, boneSize, scaleFactor, versionIndex, isAscii, true,mergeMesh);
 		exporter->ExportMorphs(imported, false, flatInbetween);
 		exporter->ExportAnimations(eulerFilter, filterPrecision, flatInbetween);
 		exporter->SkipRootNode();
@@ -26,7 +26,7 @@ namespace AssetStudio
 		Directory::SetCurrentDirectory(currentDir);
 	}
 
-	void Fbx::Exporter::ExportMorph(String^ path, IImported^ imported, bool morphMask, bool flatInbetween, bool skins, float boneSize, float scaleFactor, int versionIndex, bool isAscii)
+	void Fbx::Exporter::ExportMorph(String^ path, IImported^ imported, bool morphMask, bool flatInbetween, bool skins, float boneSize, float scaleFactor, int versionIndex, bool isAscii, bool mergeMesh)
 	{
 		FileInfo^ file = gcnew FileInfo(path);
 		DirectoryInfo^ dir = file->Directory;
@@ -38,7 +38,7 @@ namespace AssetStudio
 		Directory::SetCurrentDirectory(dir->FullName);
 		path = Path::GetFileName(path);
 
-		Exporter^ exporter = gcnew Exporter(path, imported, false, true, skins, boneSize, scaleFactor, versionIndex, isAscii, false);
+		Exporter^ exporter = gcnew Exporter(path, imported, false, true, skins, boneSize, scaleFactor, versionIndex, isAscii, false,mergeMesh);
 		exporter->ExportMorphs(imported, morphMask, flatInbetween);
 		exporter->SkipRootNode();
 		exporter->pExporter->Export(exporter->pScene);
@@ -47,7 +47,7 @@ namespace AssetStudio
 		Directory::SetCurrentDirectory(currentDir);
 	}
 
-	Fbx::Exporter::Exporter(String^ path, IImported^ imported, bool allFrames, bool allBones, bool skins, float boneSize, float scaleFactor, int versionIndex, bool isAscii, bool normals)
+	Fbx::Exporter::Exporter(String^ path, IImported^ imported, bool allFrames, bool allBones, bool skins, float boneSize, float scaleFactor, int versionIndex, bool isAscii, bool normals,bool mergeMesh)
 	{
 		this->imported = imported;
 		exportSkins = skins;
@@ -135,7 +135,13 @@ namespace AssetStudio
 					meshPath = gcnew String(rootNode->GetName()) + "/" + meshPath;
 				}
 				ImportedMesh^ mesh = ImportedHelpers::FindMesh(meshPath, imported->MeshList);
-				ExportMesh(meshNode, mesh, normals);
+				if (mergeMesh) {
+					ExportMeshMerge(meshNode, mesh, normals);
+				}
+				else
+				{
+					ExportMesh(meshNode, mesh, normals);
+				}				
 			}
 		}
 		else
@@ -369,8 +375,7 @@ namespace AssetStudio
 					pBoneNodeList->Add(lFrame);
 				}
 			}
-
-
+			
 			for (int i = 0; i < meshList->SubmeshList->Count; i++)
 			{
 				char* pName = NULL;
@@ -448,12 +453,11 @@ namespace AssetStudio
 						}
 					}
 
-					pFrameNode->AddNodeAttribute(pMesh);
-					//FbxNode* pMeshNode = FbxNode::Create(pScene, pName);
-					//pMeshNode->SetNodeAttribute(pMesh);
-					//pSubMeshNodes.Add(pMeshNode);
 
-					//pFrameNode->AddChild(pMeshNode);
+					FbxNode* pMeshNode = FbxNode::Create(pScene, pName);
+					pMeshNode->SetNodeAttribute(pMesh);
+					pFrameNode->AddChild(pMeshNode);
+
 
 					ImportedMaterial^ mat = ImportedHelpers::FindMaterial(meshObj->Material, imported->MaterialList);
 					if (mat != nullptr)
@@ -512,8 +516,7 @@ namespace AssetStudio
 								pMaterials->Add(pMat);
 							}
 
-							//pMeshNode->AddMaterial(pMat);
-							pFrameNode->AddMaterial(pMat);
+							pMeshNode->AddMaterial(pMat);
 
 							bool hasTexture = false;
 
@@ -547,8 +550,8 @@ namespace AssetStudio
 
 							if (hasTexture)
 							{
-								//pMeshNode->SetShadingMode(FbxNode::eTextureShading);
-								pFrameNode->SetShadingMode(FbxNode::eTextureShading);
+								pMeshNode->SetShadingMode(FbxNode::eTextureShading);
+
 							}
 						}
 						finally
@@ -642,44 +645,330 @@ namespace AssetStudio
 					Marshal::FreeHGlobal((IntPtr)pName);
 				}
 			}
-
-			/*FbxNode* newNode = nullptr;
-
-			if (pSubMeshNodes.GetCount() > 1)
-			{
-
-				FbxGeometryConverter geomConverter(pSdkManager);
-				newNode = geomConverter.MergeMeshes(pSubMeshNodes, pFrameNode->GetName(), pScene);
-				for (int i = 0; i < pSubMeshNodes.GetCount();++i) {
-					for (int j = 0; j < pSubMeshNodes[i]->GetMaterialCount(); ++j) {
-						newNode->AddMaterial(pSubMeshNodes[i]->GetMaterial(j));
-					}
-				}
-			}
-			else
-			{
-				newNode = pSubMeshNodes[0];
-				newNode->SetName(pFrameNode->GetName());
-			}
-
-			for (int i = 0; i < pFrameNode->GetChildCount(); ++i) {
-				newNode->AddChild(pFrameNode->GetChild(i));
-			}
-
-			int index = pMeshNodes->Find(pFrameNode);
-			pMeshNodes->RemoveAt(index);
-			pMeshNodes->InsertAt(index, newNode);
-
-			FbxNode* pParent = pFrameNode->GetParent();
-			pParent->RemoveChild(pFrameNode);
-			pParent->AddChild(newNode);*/
-
 		}
 		finally
 		{
 			if (pBoneNodeList != NULL)
 			{
 				delete pBoneNodeList;
+			}
+		}
+	}
+
+	void Fbx::Exporter::ExportMeshMerge(FbxNode* pFrameNode, ImportedMesh^ meshList, bool normals)
+	{
+		int lastSlash = meshList->Path->LastIndexOf('/');
+		String^ frameName = lastSlash < 0 ? meshList->Path : meshList->Path->Substring(lastSlash + 1);
+		List<ImportedBone^>^ boneList = meshList->BoneList;
+		bool hasBones;
+		if (exportSkins && boneList != nullptr)
+		{
+			hasBones = boneList->Count > 0;
+		}
+		else
+		{
+			hasBones = false;
+		}
+
+		FbxArray<FbxNode*>* pBoneNodeList = NULL;
+		FbxArray<FbxCluster*>* pClusterArray = NULL;
+
+		try
+		{
+			if (hasBones)
+			{
+				pBoneNodeList = new FbxArray<FbxNode*>();
+				pBoneNodeList->Reserve(boneList->Count);
+				for (int i = 0; i < boneList->Count; i++)
+				{
+					ImportedBone^ bone = boneList[i];
+					FbxNode* lFrame = FindNodeByPath(bone->Path, false);
+					if (lFrame == nullptr) {
+						//create a new
+						lFrame = CreateNodeByPath(bone->Path, false);
+					}
+					pBoneNodeList->Add(lFrame);
+				}
+
+				pClusterArray = new FbxArray<FbxCluster*>();
+				pClusterArray->Reserve(boneList->Count);
+
+				for (int i = 0; i < boneList->Count; i++)
+				{
+					FbxNode* pNode = pBoneNodeList->GetAt(i);
+					FbxString lClusterName = pNode->GetNameOnly() + FbxString("Cluster");
+					FbxCluster* pCluster = FbxCluster::Create(pSdkManager, lClusterName.Buffer());
+					pCluster->SetLink(pNode);
+					pCluster->SetLinkMode(FbxCluster::eTotalOne);
+					pClusterArray->Add(pCluster);
+				}
+			}
+
+
+			FbxMesh* pMesh = FbxMesh::Create(pScene, "");
+
+			unsigned int firstVertex = 0;
+			int vertexCount = 0;
+
+			for (int i = 0; i < meshList->SubmeshList->Count; i++)
+			{
+				vertexCount += meshList->SubmeshList[i]->VertexList->Count;
+			}
+
+			pMesh->InitControlPoints(vertexCount);
+			FbxVector4* pControlPoints = pMesh->GetControlPoints();
+
+			FbxGeometryElementNormal* lGeometryElementNormal = NULL;
+			//if (normals)
+			{
+				lGeometryElementNormal = pMesh->GetElementNormal();
+				if (!lGeometryElementNormal)
+				{
+					lGeometryElementNormal = pMesh->CreateElementNormal();
+				}
+				lGeometryElementNormal->SetMappingMode(FbxGeometryElement::eByControlPoint);
+				lGeometryElementNormal->SetReferenceMode(FbxGeometryElement::eDirect);
+			}
+
+			FbxGeometryElementUV* lGeometryElementUV = pMesh->GetElementUV();
+			if (!lGeometryElementUV)
+			{
+				lGeometryElementUV = pMesh->CreateElementUV("");
+			}
+			lGeometryElementUV->SetMappingMode(FbxGeometryElement::eByControlPoint);
+			lGeometryElementUV->SetReferenceMode(FbxGeometryElement::eDirect);
+
+			FbxGeometryElementTangent* lGeometryElementTangent = NULL;
+			if (normals)
+			{
+				lGeometryElementTangent = pMesh->GetElementTangent();
+				if (!lGeometryElementTangent)
+				{
+					lGeometryElementTangent = pMesh->CreateElementTangent();
+				}
+				lGeometryElementTangent->SetMappingMode(FbxGeometryElement::eByControlPoint);
+				lGeometryElementTangent->SetReferenceMode(FbxGeometryElement::eDirect);
+			}
+
+			FbxGeometryElementVertexColor* lGeometryElementVertexColor = nullptr;
+
+			bool vertexColours = vertexCount > 0 && dynamic_cast<ImportedVertexWithColour^>(meshList->SubmeshList[0]->VertexList[0]) != nullptr;
+			if (vertexColours)
+			{
+				lGeometryElementVertexColor = pMesh->CreateElementVertexColor();
+				lGeometryElementVertexColor->SetMappingMode(FbxGeometryElement::eByControlPoint);
+				lGeometryElementVertexColor->SetReferenceMode(FbxGeometryElement::eDirect);
+			}
+
+			FbxGeometryElementMaterial* lGeometryElementMaterial = pMesh->GetElementMaterial();
+			if (!lGeometryElementMaterial)
+			{
+				lGeometryElementMaterial = pMesh->CreateElementMaterial();
+			}
+			lGeometryElementMaterial->SetMappingMode(FbxGeometryElement::eByPolygon);
+			lGeometryElementMaterial->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
+
+			pFrameNode->AddNodeAttribute(pMesh);
+
+			int materialIndex = -1;
+
+			for (int i = 0; i < meshList->SubmeshList->Count; i++)
+			{
+				ImportedSubmesh^ meshObj = meshList->SubmeshList[i];
+				List<ImportedFace^>^ faceList = meshObj->FaceList;
+				List<ImportedVertex^>^ vertexList = meshObj->VertexList;
+
+
+				ImportedMaterial^ mat = ImportedHelpers::FindMaterial(meshObj->Material, imported->MaterialList);
+				FbxSurfacePhong* pMat = nullptr;
+				if (mat != nullptr)
+				{
+					++materialIndex;
+					char* pMatName = NULL;
+					try
+					{
+						pMatName = StringToCharArray(mat->Name);
+						int foundMat = -1;
+						for (int j = 0; j < pMaterials->GetCount(); j++)
+						{
+							FbxSurfacePhong* pMatTemp = pMaterials->GetAt(j);
+							if (strcmp(pMatTemp->GetName(), pMatName) == 0)
+							{
+								foundMat = j;
+								break;
+							}
+						}
+
+						if (foundMat >= 0)
+						{
+							pMat = pMaterials->GetAt(foundMat);
+						}
+						else
+						{
+							FbxString lShadingName = "Phong";
+							Color diffuse = mat->Diffuse;
+							Color ambient = mat->Ambient;
+							Color emissive = mat->Emissive;
+							Color specular = mat->Specular;
+							Color reflection = mat->Reflection;
+							pMat = FbxSurfacePhong::Create(pScene, pMatName);
+							pMat->Diffuse.Set(FbxDouble3(diffuse.R, diffuse.G, diffuse.B));
+							pMat->DiffuseFactor.Set(FbxDouble(diffuse.A));
+							pMat->Ambient.Set(FbxDouble3(ambient.R, ambient.G, ambient.B));
+							pMat->AmbientFactor.Set(FbxDouble(ambient.A));
+							pMat->Emissive.Set(FbxDouble3(emissive.R, emissive.G, emissive.B));
+							pMat->EmissiveFactor.Set(FbxDouble(emissive.A));
+							pMat->Specular.Set(FbxDouble3(specular.R, specular.G, specular.B));
+							pMat->SpecularFactor.Set(FbxDouble(specular.A));
+							pMat->Reflection.Set(FbxDouble3(reflection.R, reflection.G, reflection.B));
+							pMat->ReflectionFactor.Set(FbxDouble(reflection.A));
+							pMat->Shininess.Set(FbxDouble(mat->Shininess));
+							pMat->TransparencyFactor.Set(FbxDouble(mat->Transparency));
+							pMat->ShadingModel.Set(lShadingName);
+							foundMat = pMaterials->GetCount();
+							pMaterials->Add(pMat);
+						}
+						pFrameNode->AddMaterial(pMat);
+
+						bool hasTexture = false;
+
+						for each (ImportedMaterialTexture^ texture in mat->Textures)
+						{
+							auto pTexture = ExportTexture(ImportedHelpers::FindTexture(texture->Name, imported->TextureList));
+							if (pTexture != NULL)
+							{
+								if (texture->Dest == 0)
+								{
+									LinkTexture(texture, pTexture, pMat->Diffuse);
+									hasTexture = true;
+								}
+								else if (texture->Dest == 1)
+								{
+									LinkTexture(texture, pTexture, pMat->NormalMap);
+									hasTexture = true;
+								}
+								else if (texture->Dest == 2)
+								{
+									LinkTexture(texture, pTexture, pMat->Specular);
+									hasTexture = true;
+								}
+								else if (texture->Dest == 3)
+								{
+									LinkTexture(texture, pTexture, pMat->Bump);
+									hasTexture = true;
+								}
+							}
+						}
+
+						if (hasTexture)
+						{
+							pFrameNode->SetShadingMode(FbxNode::eTextureShading);
+						}
+					}
+					finally
+					{
+						Marshal::FreeHGlobal((IntPtr)pMatName);
+					}
+				}
+
+				for (int j = 0; j < vertexList->Count; j++)
+				{
+					ImportedVertex^ vertex = vertexList[j];
+					Vector3 coords = vertex->Position;
+					pControlPoints[firstVertex+j] = FbxVector4(coords.X, coords.Y, coords.Z, 0);
+					//if (normals)
+					{
+						Vector3 normal = vertex->Normal;
+						lGeometryElementNormal->GetDirectArray().Add(FbxVector4(normal.X, normal.Y, normal.Z, 0));
+					}
+					array<float>^ uv = vertex->UV;
+					if (uv != nullptr)
+						lGeometryElementUV->GetDirectArray().Add(FbxVector2(uv[0], uv[1]));
+					if (normals)
+					{
+						Vector4 tangent = vertex->Tangent;
+						lGeometryElementTangent->GetDirectArray().Add(FbxVector4(tangent.X, tangent.Y, tangent.Z, tangent.W));
+					}
+
+					//color
+					if (vertexColours)
+					{
+						ImportedVertexWithColour^ vert = (ImportedVertexWithColour^)vertexList[j];
+						lGeometryElementVertexColor->GetDirectArray().Add(FbxColor(vert->Colour.R, vert->Colour.G, vert->Colour.B, vert->Colour.A));
+					}
+
+					if (hasBones && vertex->BoneIndices != nullptr)
+					{
+						auto boneIndices = vertex->BoneIndices;
+						auto weights4 = vertex->Weights;
+						for (int k = 0; k < weights4->Length; k++)
+						{
+							if (boneIndices[k] < boneList->Count && weights4[k] > 0)
+							{
+								FbxCluster* pCluster = pClusterArray->GetAt(boneIndices[k]);
+								pCluster->AddControlPointIndex(j, weights4[k]);
+							}
+						}
+					}
+				}
+
+				int firstFace = firstVertex;
+
+				firstVertex += vertexList->Count;
+
+				for (int j = 0; j < faceList->Count; j++)
+				{
+					ImportedFace^ face = faceList[j];
+					pMesh->BeginPolygon(materialIndex);
+					pMesh->AddPolygon(face->VertexIndices[0]+ firstFace);
+					pMesh->AddPolygon(face->VertexIndices[1]+ firstFace);
+					pMesh->AddPolygon(face->VertexIndices[2]+ firstFace);
+					pMesh->EndPolygon();
+				}
+
+				if (hasBones)
+				{
+					FbxSkin* pSkin = FbxSkin::Create(pScene, "");
+					FbxAMatrix lMeshMatrix = pFrameNode->EvaluateGlobalTransform();// pMeshNode->EvaluateGlobalTransform();
+					for (int j = 0; j < boneList->Count; j++)
+					{
+						FbxCluster* pCluster = pClusterArray->GetAt(j);
+						if (pCluster->GetControlPointIndicesCount() > 0)
+						{
+							auto boneMatrix = boneList[j]->Matrix;
+							FbxAMatrix lBoneMatrix;
+							for (int m = 0; m < 4; m++)
+							{
+								for (int n = 0; n < 4; n++)
+								{
+									lBoneMatrix.mData[m][n] = boneMatrix[m, n];
+								}
+							}
+
+							pCluster->SetTransformMatrix(lMeshMatrix);
+							pCluster->SetTransformLinkMatrix(lMeshMatrix * lBoneMatrix.Inverse());
+
+							pSkin->AddCluster(pCluster);
+						}
+					}
+
+					if (pSkin->GetClusterCount() > 0)
+					{
+						pMesh->AddDeformer(pSkin);
+					}
+				}
+				
+			}
+		}
+		finally
+		{
+			if (pBoneNodeList != NULL)
+			{
+				delete pBoneNodeList;
+			}
+			if (pClusterArray != NULL)
+			{
+				delete pClusterArray;
 			}
 		}
 	}
