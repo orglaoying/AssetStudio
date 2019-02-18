@@ -943,7 +943,7 @@ namespace AssetStudio
 				for (int j = 0; j < boneList->Count; j++)
 				{
 					FbxCluster* pCluster = pClusterArray->GetAt(j);
-					if (pCluster->GetControlPointIndicesCount() > 0)
+					//if (pCluster->GetControlPointIndicesCount() > 0)
 					{
 						auto boneMatrix = boneList[j]->Matrix;
 						FbxAMatrix lBoneMatrix;
