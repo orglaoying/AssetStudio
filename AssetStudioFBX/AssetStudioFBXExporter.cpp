@@ -376,6 +376,8 @@ namespace AssetStudio
 				}
 			}
 			
+			bool onlyOneSubmesh = meshList->SubmeshList->Count==1;
+
 			for (int i = 0; i < meshList->SubmeshList->Count; i++)
 			{
 				char* pName = NULL;
@@ -453,11 +455,17 @@ namespace AssetStudio
 						}
 					}
 
-
 					FbxNode* pMeshNode = FbxNode::Create(pScene, pName);
-					pMeshNode->SetNodeAttribute(pMesh);
-					pFrameNode->AddChild(pMeshNode);
-
+					if (onlyOneSubmesh) 
+					{
+						pMeshNode = pFrameNode;
+					}
+					else
+					{
+						pMeshNode = FbxNode::Create(pScene, pName);
+						pFrameNode->AddChild(pMeshNode);
+					}
+					pMeshNode->SetNodeAttribute(pMesh);		
 
 					ImportedMaterial^ mat = ImportedHelpers::FindMaterial(meshObj->Material, imported->MaterialList);
 					if (mat != nullptr)
@@ -607,7 +615,7 @@ namespace AssetStudio
 					if (hasBones)
 					{
 						FbxSkin* pSkin = FbxSkin::Create(pScene, "");
-						FbxAMatrix lMeshMatrix = pFrameNode->EvaluateGlobalTransform();// pMeshNode->EvaluateGlobalTransform();
+						FbxAMatrix lMeshMatrix = pMeshNode->EvaluateGlobalTransform();//pFrameNode->EvaluateGlobalTransform();
 						for (int j = 0; j < boneList->Count; j++)
 						{
 							FbxCluster* pCluster = pClusterArray->GetAt(j);
@@ -906,58 +914,58 @@ namespace AssetStudio
 							if (boneIndices[k] < boneList->Count && weights4[k] > 0)
 							{
 								FbxCluster* pCluster = pClusterArray->GetAt(boneIndices[k]);
-								pCluster->AddControlPointIndex(j, weights4[k]);
+								pCluster->AddControlPointIndex(j+firstVertex, weights4[k]);
 							}
 						}
 					}
 				}
-
-				int firstFace = firstVertex;
-
-				firstVertex += vertexList->Count;
 
 				for (int j = 0; j < faceList->Count; j++)
 				{
 					ImportedFace^ face = faceList[j];
 					pMesh->BeginPolygon(materialIndex);
-					pMesh->AddPolygon(face->VertexIndices[0]+ firstFace);
-					pMesh->AddPolygon(face->VertexIndices[1]+ firstFace);
-					pMesh->AddPolygon(face->VertexIndices[2]+ firstFace);
+					pMesh->AddPolygon(face->VertexIndices[0]+ firstVertex);
+					pMesh->AddPolygon(face->VertexIndices[1]+ firstVertex);
+					pMesh->AddPolygon(face->VertexIndices[2]+ firstVertex);
 					pMesh->EndPolygon();
 				}
 
-				if (hasBones)
+				
+
+				firstVertex += vertexList->Count;
+				
+			}
+
+			if (hasBones)
+			{
+				FbxSkin* pSkin = FbxSkin::Create(pScene, "");
+				FbxAMatrix lMeshMatrix = pFrameNode->EvaluateGlobalTransform();
+				for (int j = 0; j < boneList->Count; j++)
 				{
-					FbxSkin* pSkin = FbxSkin::Create(pScene, "");
-					FbxAMatrix lMeshMatrix = pFrameNode->EvaluateGlobalTransform();// pMeshNode->EvaluateGlobalTransform();
-					for (int j = 0; j < boneList->Count; j++)
+					FbxCluster* pCluster = pClusterArray->GetAt(j);
+					if (pCluster->GetControlPointIndicesCount() > 0)
 					{
-						FbxCluster* pCluster = pClusterArray->GetAt(j);
-						if (pCluster->GetControlPointIndicesCount() > 0)
+						auto boneMatrix = boneList[j]->Matrix;
+						FbxAMatrix lBoneMatrix;
+						for (int m = 0; m < 4; m++)
 						{
-							auto boneMatrix = boneList[j]->Matrix;
-							FbxAMatrix lBoneMatrix;
-							for (int m = 0; m < 4; m++)
+							for (int n = 0; n < 4; n++)
 							{
-								for (int n = 0; n < 4; n++)
-								{
-									lBoneMatrix.mData[m][n] = boneMatrix[m, n];
-								}
+								lBoneMatrix.mData[m][n] = boneMatrix[m, n];
 							}
-
-							pCluster->SetTransformMatrix(lMeshMatrix);
-							pCluster->SetTransformLinkMatrix(lMeshMatrix * lBoneMatrix.Inverse());
-
-							pSkin->AddCluster(pCluster);
 						}
-					}
 
-					if (pSkin->GetClusterCount() > 0)
-					{
-						pMesh->AddDeformer(pSkin);
+						pCluster->SetTransformMatrix(lMeshMatrix);
+						pCluster->SetTransformLinkMatrix(lMeshMatrix * lBoneMatrix.Inverse());
+
+						pSkin->AddCluster(pCluster);
 					}
 				}
-				
+
+				if (pSkin->GetClusterCount() > 0)
+				{
+					pMesh->AddDeformer(pSkin);
+				}
 			}
 		}
 		finally
