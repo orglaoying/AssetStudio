@@ -28,7 +28,25 @@ namespace AssetStudio
 
             if (shader.compressedBlob != null) //5.5 and up
             {
-                return ConvertMultiple(shader)[0];
+                string[] strs = ConvertMultiple(shader);
+                if (strs.Length > 1)
+                {
+                    StringBuilder sb = new StringBuilder();
+
+                    for (int i = 0; i < strs.Length; ++i)
+                    {
+                        sb.Append("//==========");
+                        sb.Append(shader.platforms[i]);
+                        sb.Append("==========//\n");
+                        sb.Append(strs[i]);
+                        sb.Append("\n");
+                    }
+                    return sb.ToString();
+                }
+                else
+                {
+                    return strs[0];
+                }
             }
 
             return Encoding.UTF8.GetString(shader.m_Script);
