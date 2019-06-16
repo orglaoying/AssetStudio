@@ -67,21 +67,9 @@ namespace AssetStudio
         private QFORMAT q_format;
         //texgenpack
         private texgenpack_texturetype texturetype;
-
-        [DllImport("PVRTexLibWrapper.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern bool DecompressPVR(byte[] buffer, IntPtr bmp, int len);
-
-        [DllImport("TextureConverterWrapper.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern bool Ponvert(byte[] buffer, IntPtr bmp, int nWidth, int nHeight, int len, int type, int bmpsize, bool fixAlpha);
-
-        [DllImport("crunch.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern bool DecompressCRN(byte[] pSrc_file_data, int src_file_size, out IntPtr uncompressedData, out int uncompressedSize);
-
-        [DllImport("crunchunity.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern bool DecompressUnityCRN(byte[] pSrc_file_data, int src_file_size, out IntPtr uncompressedData, out int uncompressedSize);
-
-        [DllImport("texgenpack.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern void Decode(int texturetype, byte[] texturedata, int width, int height, IntPtr bmp);
+        //astc
+        private int astcBlockWidth;
+        private int astcBlockHeight;
 
 
         public Texture2DConverter(Texture2D m_Texture2D)
@@ -514,37 +502,43 @@ namespace AssetStudio
                 case TextureFormat.ASTC_RGB_4x4: //test pass
                 case TextureFormat.ASTC_RGBA_4x4: //test pass
                     {
-                        pvrPixelFormat = 27;
+                        astcBlockWidth = 4;
+                        astcBlockHeight = 4;
                         break;
                     }
                 case TextureFormat.ASTC_RGB_5x5: //test pass
                 case TextureFormat.ASTC_RGBA_5x5: //test pass
                     {
-                        pvrPixelFormat = 29;
+                        astcBlockWidth = 5;
+                        astcBlockHeight = 5;
                         break;
                     }
                 case TextureFormat.ASTC_RGB_6x6: //test pass
                 case TextureFormat.ASTC_RGBA_6x6: //test pass
                     {
-                        pvrPixelFormat = 31;
+                        astcBlockWidth = 6;
+                        astcBlockHeight = 6;
                         break;
                     }
                 case TextureFormat.ASTC_RGB_8x8: //test pass
                 case TextureFormat.ASTC_RGBA_8x8: //test pass
                     {
-                        pvrPixelFormat = 34;
+                        astcBlockWidth = 8;
+                        astcBlockHeight = 8;
                         break;
                     }
                 case TextureFormat.ASTC_RGB_10x10: //test pass
                 case TextureFormat.ASTC_RGBA_10x10: //test pass
                     {
-                        pvrPixelFormat = 38;
+                        astcBlockWidth = 10;
+                        astcBlockHeight = 10;
                         break;
                     }
                 case TextureFormat.ASTC_RGB_12x12: //test pass
                 case TextureFormat.ASTC_RGBA_12x12: //test pass
                     {
-                        pvrPixelFormat = 40;
+                        astcBlockWidth = 12;
+                        astcBlockHeight = 12;
                         break;
                     }
                 case TextureFormat.RG16: //test pass
@@ -837,18 +831,6 @@ namespace AssetStudio
                 case TextureFormat.ETC2_RGB:
                 case TextureFormat.ETC2_RGBA1:
                 case TextureFormat.ETC2_RGBA8:
-                case TextureFormat.ASTC_RGB_4x4:
-                case TextureFormat.ASTC_RGB_5x5:
-                case TextureFormat.ASTC_RGB_6x6:
-                case TextureFormat.ASTC_RGB_8x8:
-                case TextureFormat.ASTC_RGB_10x10:
-                case TextureFormat.ASTC_RGB_12x12:
-                case TextureFormat.ASTC_RGBA_4x4:
-                case TextureFormat.ASTC_RGBA_5x5:
-                case TextureFormat.ASTC_RGBA_6x6:
-                case TextureFormat.ASTC_RGBA_8x8:
-                case TextureFormat.ASTC_RGBA_10x10:
-                case TextureFormat.ASTC_RGBA_12x12:
                 case TextureFormat.ETC_RGB4_3DS:
                 case TextureFormat.ETC_RGBA8_3DS:
                     bitmap = PVRToBitmap(ConvertToPVR());
@@ -874,7 +856,7 @@ namespace AssetStudio
                 case TextureFormat.BC5:
                 case TextureFormat.BC6H:
                 case TextureFormat.BC7:
-                    bitmap = Texgenpack();
+                    bitmap = TexgenPackDecode();
                     break;
                 case TextureFormat.DXT1Crunched:
                 case TextureFormat.DXT5Crunched:
@@ -885,6 +867,20 @@ namespace AssetStudio
                 case TextureFormat.ETC2_RGBA8Crunched:
                     DecompressCRN();
                     bitmap = PVRToBitmap(ConvertToPVR());
+                    break;
+                case TextureFormat.ASTC_RGB_4x4:
+                case TextureFormat.ASTC_RGB_5x5:
+                case TextureFormat.ASTC_RGB_6x6:
+                case TextureFormat.ASTC_RGB_8x8:
+                case TextureFormat.ASTC_RGB_10x10:
+                case TextureFormat.ASTC_RGB_12x12:
+                case TextureFormat.ASTC_RGBA_4x4:
+                case TextureFormat.ASTC_RGBA_5x5:
+                case TextureFormat.ASTC_RGBA_6x6:
+                case TextureFormat.ASTC_RGBA_8x8:
+                case TextureFormat.ASTC_RGBA_10x10:
+                case TextureFormat.ASTC_RGBA_12x12:
+                    bitmap = DecodeASTC();
                     break;
                 default:
                     return null;
@@ -922,43 +918,41 @@ namespace AssetStudio
             {
                 buff = image_data;
             }
-            var hObject = GCHandle.Alloc(buff, GCHandleType.Pinned);
-            var pObject = hObject.AddrOfPinnedObject();
-            var bitmap = new Bitmap(m_Width, m_Height, stride, PixelFormat.Format16bppRgb565, pObject);
-            hObject.Free();
+            var gch = GCHandle.Alloc(buff, GCHandleType.Pinned);
+            var imagePtr = gch.AddrOfPinnedObject();
+            var bitmap = new Bitmap(m_Width, m_Height, stride, PixelFormat.Format16bppRgb565, imagePtr);
+            gch.Free();
             return bitmap;
         }
 
-        private Bitmap PVRToBitmap(byte[] pvrdata)
+        private Bitmap PVRToBitmap(byte[] pvrData)
         {
-            var bitmap = new Bitmap(m_Width, m_Height);
-            var rect = new Rectangle(0, 0, m_Width, m_Height);
-            var bmd = bitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
-            var len = Math.Abs(bmd.Stride) * bmd.Height;
-            if (!DecompressPVR(pvrdata, bmd.Scan0, len))
+            var imageBuff = new byte[m_Width * m_Height * 4];
+            var gch = GCHandle.Alloc(imageBuff, GCHandleType.Pinned);
+            var imagePtr = gch.AddrOfPinnedObject();
+            if (!NativeMethods.DecompressPVR(pvrData, imagePtr))
             {
-                bitmap.UnlockBits(bmd);
-                bitmap.Dispose();
+                gch.Free();
                 return null;
             }
-            bitmap.UnlockBits(bmd);
+            var bitmap = new Bitmap(m_Width, m_Height, m_Width * 4, PixelFormat.Format32bppArgb, imagePtr);
+            gch.Free();
             return bitmap;
         }
 
         private Bitmap TextureConverter()
         {
-            var bitmap = new Bitmap(m_Width, m_Height);
-            var rect = new Rectangle(0, 0, m_Width, m_Height);
-            var bmd = bitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
-            var len = Math.Abs(bmd.Stride) * bmd.Height;
+            var imageBuff = new byte[m_Width * m_Height * 4];
+            var gch = GCHandle.Alloc(imageBuff, GCHandleType.Pinned);
+            var imagePtr = gch.AddrOfPinnedObject();
             var fixAlpha = glBaseInternalFormat == KTXHeader.GL_RED || glBaseInternalFormat == KTXHeader.GL_RG;
-            if (!Ponvert(image_data, bmd.Scan0, m_Width, m_Height, image_data_size, (int)q_format, len, fixAlpha))
+            if (!NativeMethods.Ponvert(image_data, image_data_size, m_Width, m_Height, (int)q_format, fixAlpha, imagePtr))
             {
-                bitmap.UnlockBits(bmd);
-                bitmap.Dispose();
+                gch.Free();
                 return null;
             }
-            bitmap.UnlockBits(bmd);
+            var bitmap = new Bitmap(m_Width, m_Height, m_Width * 4, PixelFormat.Format32bppArgb, imagePtr);
+            gch.Free();
             return bitmap;
         }
 
@@ -971,11 +965,11 @@ namespace AssetStudio
                 || m_TextureFormat == TextureFormat.ETC_RGB4Crunched
                 || m_TextureFormat == TextureFormat.ETC2_RGBA8Crunched)
             {
-                result = DecompressUnityCRN(image_data, image_data_size, out uncompressedData, out uncompressedSize);
+                result = NativeMethods.DecompressUnityCRN(image_data, image_data_size, out uncompressedData, out uncompressedSize);
             }
             else
             {
-                result = DecompressCRN(image_data, image_data_size, out uncompressedData, out uncompressedSize);
+                result = NativeMethods.DecompressCRN(image_data, image_data_size, out uncompressedData, out uncompressedSize);
             }
 
             if (result)
@@ -988,15 +982,52 @@ namespace AssetStudio
             }
         }
 
-        private Bitmap Texgenpack()
+        private Bitmap TexgenPackDecode()
         {
-            var bitmap = new Bitmap(m_Width, m_Height);
-            var rect = new Rectangle(0, 0, m_Width, m_Height);
-            var bmd = bitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
-            Decode((int)texturetype, image_data, m_Width, m_Height, bmd.Scan0);
-            bitmap.UnlockBits(bmd);
+            var imageBuff = new byte[m_Width * m_Height * 4];
+            var gch = GCHandle.Alloc(imageBuff, GCHandleType.Pinned);
+            var imagePtr = gch.AddrOfPinnedObject();
+            NativeMethods.TexgenPackDecode(image_data, (int)texturetype, m_Width, m_Height, imagePtr);
+            var bitmap = new Bitmap(m_Width, m_Height, m_Width * 4, PixelFormat.Format32bppArgb, imagePtr);
+            gch.Free();
             return bitmap;
         }
+
+        private Bitmap DecodeASTC()
+        {
+            var imageBuff = new byte[m_Width * m_Height * 4];
+            var gch = GCHandle.Alloc(imageBuff, GCHandleType.Pinned);
+            var imagePtr = gch.AddrOfPinnedObject();
+            if (!NativeMethods.DecodeASTC(image_data, m_Width, m_Height, astcBlockWidth, astcBlockHeight, imagePtr))
+            {
+                gch.Free();
+                return null;
+            }
+            var bitmap = new Bitmap(m_Width, m_Height, m_Width * 4, PixelFormat.Format32bppArgb, imagePtr);
+            gch.Free();
+            return bitmap;
+        }
+    }
+
+    internal static class NativeMethods
+    {
+        [DllImport("PVRTexLibWrapper.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool DecompressPVR(byte[] data, IntPtr image);
+
+        [DllImport("TextureConverterWrapper.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool Ponvert(byte[] data, int dataSize, int width, int height, int type, bool fixAlpha, IntPtr image);
+
+        [DllImport("crunch.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool DecompressCRN(byte[] data, int dataSize, out IntPtr uncompressedData, out int uncompressedSize);
+
+        [DllImport("crunchunity.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool DecompressUnityCRN(byte[] data, int dataSize, out IntPtr uncompressedData, out int uncompressedSize);
+
+        [DllImport("texgenpack.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void TexgenPackDecode(byte[] data, int textureType, int width, int height, IntPtr image);
+
+        [DllImport("astc.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool DecodeASTC(byte[] data, int width, int height, int blockwidth, int blockheight, IntPtr image);
     }
 
     public static class KTXHeader

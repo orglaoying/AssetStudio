@@ -35,7 +35,7 @@ namespace AssetStudioGUI
                         extractedCount += ExtractWebDataFile(fileName, reader);
                     else
                         reader.Dispose();
-                    Progress.Report(++i, fileNames.Length);
+                    Progress.Report(i + 1, fileNames.Length);
                 }
 
                 Logger.Info($"Finished extracting {extractedCount} files.");
@@ -168,6 +168,18 @@ namespace AssetStudioGUI
                             ab = m_AssetBundle;
                             assetItem.Text = ab.m_Name;
                             break;
+                        case SpriteAtlas m_SpriteAtlas:
+                            foreach (var m_PackedSprite in m_SpriteAtlas.m_PackedSprites)
+                            {
+                                if (m_PackedSprite.TryGet(out var m_Sprite))
+                                {
+                                    if (m_Sprite.m_SpriteAtlas.IsNull())
+                                    {
+                                        m_Sprite.m_SpriteAtlas.Set(m_SpriteAtlas);
+                                    }
+                                }
+                            }
+                            break;
                         case NamedObject m_NamedObject:
                             assetItem.Text = m_NamedObject.m_Name;
                             break;
@@ -208,7 +220,11 @@ namespace AssetStudioGUI
                                 item.Extension = extension;
                             }
 
-                            item.Text = Path.GetDirectoryName(originalPath) + "\\" + item.Text;
+                            item.Text = Path.GetDirectoryName(originalPath) + "\\" + Path.GetFileNameWithoutExtension(originalPath);
+                            if (!assetsNameHash.Add((item.TypeString + item.Text).ToUpper()))
+                            {
+                                item.Text += item.UniqueID;
+                            }
                         }
                     }
                 }
@@ -250,6 +266,7 @@ namespace AssetStudioGUI
                                 var item = tempDic[m_Mesh];
                                 item.TreeNode = currentNode;
                             }
+                            tempDic[m_GameObject.m_MeshFilter].TreeNode = currentNode;
                         }
 
                         if (m_GameObject.m_SkinnedMeshRenderer != null)
@@ -259,6 +276,7 @@ namespace AssetStudioGUI
                                 var item = tempDic[m_Mesh];
                                 item.TreeNode = currentNode;
                             }
+                            tempDic[m_GameObject.m_SkinnedMeshRenderer].TreeNode = currentNode;
                         }
 
                         var parentNode = fileNode;
@@ -538,6 +556,7 @@ namespace AssetStudioGUI
         {
             ThreadPool.QueueUserWorkItem(state =>
             {
+                Progress.Reset();
                 Logger.Info($"Exporting {animator.Text}");
                 try
                 {
@@ -546,6 +565,7 @@ namespace AssetStudioGUI
                     {
                         Process.Start(exportPath);
                     }
+                    Progress.Report(1, 1);
                     Logger.Info($"Finished exporting {animator.Text}");
                 }
                 catch (Exception ex)

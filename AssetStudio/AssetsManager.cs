@@ -15,7 +15,7 @@ namespace AssetStudio
         private HashSet<string> importFilesHash = new HashSet<string>();
         private HashSet<string> assetsFileListHash = new HashSet<string>();
 
-        public void LoadFiles(string[] files)
+        public void LoadFiles(params string[] files)
         {
             var path = Path.GetDirectoryName(files[0]);
             MergeSplitAssets(path);
@@ -184,16 +184,16 @@ namespace AssetStudio
                 foreach (var file in webFile.fileList)
                 {
                     var dummyPath = Path.GetDirectoryName(fullName) + "\\" + file.fileName;
-                    switch (CheckFileType(file.stream, out reader))
+                    switch (CheckFileType(file.stream, out var fileReader))
                     {
                         case FileType.AssetsFile:
-                            LoadAssetsFromMemory(dummyPath, reader, fullName);
+                            LoadAssetsFromMemory(dummyPath, fileReader, fullName);
                             break;
                         case FileType.BundleFile:
-                            LoadBundleFile(dummyPath, reader, fullName);
+                            LoadBundleFile(dummyPath, fileReader, fullName);
                             break;
                         case FileType.WebFile:
-                            LoadWebFile(dummyPath, reader);
+                            LoadWebFile(dummyPath, fileReader);
                             break;
                     }
                 }

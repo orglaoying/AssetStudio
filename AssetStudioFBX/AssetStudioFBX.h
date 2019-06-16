@@ -64,6 +64,7 @@ namespace AssetStudio {
 			FbxArray<FbxSurfacePhong*>* pMaterials;
 			FbxArray<FbxFileTexture*>* pTextures;
 			FbxArray<FbxNode*>* pMeshNodes;
+			FbxPose* pBindPose;
 
 			Exporter(String^ path, IImported^ imported, bool allFrames, bool allBones, bool skins, float boneSize, float scaleFactor, int versionIndex, bool isAscii, bool normals, bool mergeMesh);
 			~Exporter();
@@ -77,7 +78,7 @@ namespace AssetStudio {
 			void ExportFrame(FbxNode* pParentNode, ImportedFrame^ frame);
 			void ExportMesh(FbxNode* pFrameNode, ImportedMesh^ meshList, bool normals);
 			void ExportMeshMerge(FbxNode* pFrameNode, ImportedMesh^ meshList, bool normals);
-			FbxNode* FindNodeByPath(String ^ path, bool recursive);
+			FbxNode* FindNodeByPath(String ^ path);
 			FbxNode* CreateNodeByPath(String ^ path, bool recursive);
 			FbxFileTexture* ExportTexture(ImportedTexture^ matTex);
 			void ExportAnimations(bool eulerFilter, float filterValue, bool flatInbetween);

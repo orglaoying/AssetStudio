@@ -60,11 +60,12 @@
     <Compile Include="Math\Color.cs" />
     <Compile Include="Math\Half.cs" />
     <Compile Include="Math\HalfHelper.cs" />
-    <Compile Include="Math\Matrix4x4f.cs" />
+    <Compile Include="Math\Matrix4x4.cs" />
     <Compile Include="Math\Quaternion.cs" />
     <Compile Include="Math\Vector2.cs" />
     <Compile Include="Math\Vector3.cs" />
     <Compile Include="Math\Vector4.cs" />
+    <Compile Include="UType.cs" />
     <Compile Include="ResourceReader.cs" />
     <Compile Include="IImported.cs" />
     <Compile Include="SerializedFile.cs" />
