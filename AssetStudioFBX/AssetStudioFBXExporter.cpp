@@ -691,7 +691,7 @@ namespace AssetStudio
 				for (int i = 0; i < boneList->Count; i++)
 				{
 					ImportedBone^ bone = boneList[i];
-					FbxNode* lFrame = FindNodeByPath(bone->Path, false);
+					FbxNode* lFrame = FindNodeByPath(bone->Path);
 					if (lFrame == nullptr) {
 						//create a new
 						lFrame = CreateNodeByPath(bone->Path, false);
