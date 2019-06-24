@@ -368,7 +368,7 @@ namespace AssetStudio
 					if (lFrame == nullptr) {
 						//create a new
 						lFrame= CreateNodeByPath(bone->Path,false);
-						SetNodeTransform(lFrame, bone->Matrix);
+						//SetNodeTransform(lFrame, bone->Matrix);
 					}
 					pBoneNodeList->Add(lFrame);
 				}
@@ -696,7 +696,7 @@ namespace AssetStudio
 					if (lFrame == nullptr) {
 						//create a new
 						lFrame = CreateNodeByPath(bone->Path, false);
-						SetNodeTransform(lFrame, bone->Matrix);
+						//SetNodeTransform(lFrame, bone->Matrix);
 					}
 					pBoneNodeList->Add(lFrame);
 				}
@@ -1283,11 +1283,11 @@ namespace AssetStudio
 				}
 
 				int meshVertexIndex = 0;
-				for (int meshObjIdx = pBaseNode->GetChildCount() - meshList->SubmeshList->Count; meshObjIdx < meshList->SubmeshList->Count; meshObjIdx++)
+				for (int meshObjIdx = pBaseNode->GetChildCount() /*- meshList->SubmeshList->Count*/; meshObjIdx < meshList->SubmeshList->Count; meshObjIdx++)
 				{
 					List<ImportedVertex^>^ vertList = meshList->SubmeshList[meshObjIdx]->VertexList;
 					FbxNode* pBaseMeshNode = pBaseNode->GetChild(meshObjIdx);
-					FbxMesh* pBaseMesh = pBaseMeshNode->GetMesh();
+					FbxMesh* pBaseMesh = pBaseNode->GetMesh();
 					int numColourSets = pBaseMesh->GetElementVertexColorCount();
 					
 					FbxBlendShape* lBlendShape;
