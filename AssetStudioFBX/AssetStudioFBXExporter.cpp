@@ -368,6 +368,7 @@ namespace AssetStudio
 					if (lFrame == nullptr) {
 						//create a new
 						lFrame= CreateNodeByPath(bone->Path,false);
+						SetNodeTransform(lFrame, bone->Matrix);
 					}
 					pBoneNodeList->Add(lFrame);
 				}
@@ -695,6 +696,7 @@ namespace AssetStudio
 					if (lFrame == nullptr) {
 						//create a new
 						lFrame = CreateNodeByPath(bone->Path, false);
+						SetNodeTransform(lFrame, bone->Matrix);
 					}
 					pBoneNodeList->Add(lFrame);
 				}
@@ -1292,7 +1294,7 @@ namespace AssetStudio
 					WITH_MARSHALLED_STRING
 					(
 						pShapeName,
-						morph->ClipName + (meshList->SubmeshList->Count > 1 ? "_" + String::Format("%d", meshObjIdx) : String::Empty) /*+ "_BlendShape"*/,
+						morph->ClipName + (meshList->SubmeshList->Count > 1 ? "_" + meshObjIdx : String::Empty) /*+ "_BlendShape"*/,
 						lBlendShape = FbxBlendShape::Create(pScene, pShapeName);
 					);
 					FbxProperty rootGroupProp = FbxProperty::Create(lBlendShape, FbxStringDT, "RootGroup");
@@ -1328,7 +1330,7 @@ namespace AssetStudio
 									if (pScene->FindMember<FbxShape>(pMorphShapeName))
 									{
 										Marshal::FreeHGlobal((IntPtr)pMorphShapeName);
-										pMorphShapeName = StringToCharArray(morph->ClipName + (meshList->SubmeshList->Count > 1 ? "_" + String::Format("%d", meshObjIdx) : String::Empty) + "__" + keyframe->Name);
+										pMorphShapeName = StringToCharArray(morph->ClipName + (meshList->SubmeshList->Count > 1 ? "_" + meshObjIdx : String::Empty) + "__" + keyframe->Name);
 									}
 									pShape = FbxShape::Create(pScene, pMorphShapeName);
 								}
@@ -1351,7 +1353,7 @@ namespace AssetStudio
 								WITH_MARSHALLED_STRING
 								(
 									pMorphShapeName,
-									morph->ClipName + (meshList->SubmeshList->Count > 1 ? "_" + String::Format("%d", meshObjIdx) : String::Empty) + "." + keyframe->Name,
+									morph->ClipName + (meshList->SubmeshList->Count > 1 ? "_" + meshObjIdx : String::Empty) + "." + keyframe->Name,
 									pShape = FbxShape::Create(pScene, pMorphShapeName);
 								);
 								lBlendShapeChannel->AddTargetShape(pShape, 100);
@@ -1421,7 +1423,7 @@ namespace AssetStudio
 								lGeometryElementVertexColor->SetReferenceMode(FbxGeometryElement::eDirect);
 								WITH_MARSHALLED_STRING
 								(
-									pColourLayerName, morph->ClipName + (meshList->SubmeshList->Count > 1 ? "_" + String::Format("%d", meshObjIdx) : String::Empty) + "." + keyframe->Name,
+									pColourLayerName, morph->ClipName + (meshList->SubmeshList->Count > 1 ? "_" + meshObjIdx : String::Empty) + "." + keyframe->Name,
 									lGeometryElementVertexColor->SetName(pColourLayerName);
 								);
 								for (int j = 0; j < vertList->Count; j++)
@@ -1445,8 +1447,22 @@ namespace AssetStudio
 		}
 	}
 
-	void CheckSkinnedMeshBones(IImported^ imported) 
+	void Fbx::Exporter::SetNodeTransform(FbxNode* pNode, Matrix4x4 matrix)
 	{
+		FbxMatrix nodeMatrix(matrix.M00,matrix.M10, matrix.M20, matrix.M30,
+							 matrix.M01, matrix.M11,matrix.M21, matrix.M31,
+							 matrix.M02, matrix.M12, matrix.M22, matrix.M32,
+							 matrix.M03, matrix.M13, matrix.M23, matrix.M33
+			);
+		//Vector3 position = matrix.GetPosition();
+		//Vector3 scale = matrix.GetScale();
+		//Vector3 rotation = matrix.GetRotation().QuaternionToEuler();
+		//pNode->LclScaling.Set(FbxDouble3(scale.X, scale.Y, scale.Z));
+		//pNode->LclRotation.Set(FbxDouble3(rotation.X, rotation.Y, rotation.Z));
+		//pNode->LclTranslation.Set(FbxDouble3(position.X, position.Y, position.Z));
+		//pNode->SetPreferedAngle(pNode->LclRotation.Get());
 
+		//pBindPose->Add(pNode, pNode->EvaluateGlobalTransform());
+		pBindPose->Add(pNode, nodeMatrix);
 	}
 }

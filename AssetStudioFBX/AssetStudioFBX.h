@@ -85,7 +85,7 @@ namespace AssetStudio {
 			void ExportKeyframedAnimation(ImportedKeyframedAnimation^ parser, FbxString& kTakeName, FbxAnimCurveFilterUnroll* eulerFilter, float filterPrecision, bool flatInbetween);
 			void ExportMorphs(IImported^ imported, bool morphMask, bool flatInbetween);
 
-			void CheckSkinnedMeshBones(IImported^ imported);
+			void SetNodeTransform(FbxNode* pNode,Matrix4x4 matrix);
 		};
 	};
 }

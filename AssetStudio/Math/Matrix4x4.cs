@@ -32,26 +32,45 @@ namespace AssetStudio
                 throw new ArgumentNullException(nameof(values));
             if (values.Length != 16)
                 throw new ArgumentOutOfRangeException(nameof(values), "There must be sixteen and only sixteen input values for Matrix.");
-
             M00 = values[0];
-            M10 = values[1];
-            M20 = values[2];
-            M30 = values[3];
+            M01 = values[1];
+            M02 = values[2];
+            M03 = values[3];
 
-            M01 = values[4];
+            M10 = values[4];
             M11 = values[5];
-            M21 = values[6];
-            M31 = values[7];
+            M12 = values[6];
+            M13 = values[7];
 
-            M02 = values[8];
-            M12 = values[9];
+            M20 = values[8];
+            M21 = values[9];
             M22 = values[10];
-            M32 = values[11];
+            M23 = values[11];
 
-            M03 = values[12];
-            M13 = values[13];
-            M23 = values[14];
+            M30 = values[12];
+            M31 = values[13];
+            M32 = values[14];
             M33 = values[15];
+
+            //M00 = values[0];
+            //M10 = values[1];
+            //M20 = values[2];
+            //M30 = values[3];
+
+            //M01 = values[4];
+            //M11 = values[5];
+            //M21 = values[6];
+            //M31 = values[7];
+
+            //M02 = values[8];
+            //M12 = values[9];
+            //M22 = values[10];
+            //M32 = values[11];
+
+            //M03 = values[12];
+            //M13 = values[13];
+            //M23 = values[14];
+            //M33 = values[15];
         }
 
         public float this[int row, int column]
@@ -154,6 +173,50 @@ namespace AssetStudio
                 case 3: return new Vector4(M30, M31, M32, M33);
                 default: throw new IndexOutOfRangeException("Invalid row index!");
             }
+        }
+
+        public Vector3 GetPosition()
+        {
+            return new Vector3(M03, M13, M23);
+        }
+
+        public Vector3 GetScale()
+        {
+            return new Vector3(GetColumn(0).Length(), GetColumn(1).Length(), GetColumn(2).Length());
+        }
+
+        public Quaternion GetRotation()
+        {
+            Vector3 s = GetScale();
+
+            // Normalize Scale from Matrix4x4
+            float m00 = this[0, 0] / s.X;
+            float m01 = this[0, 1] / s.Y;
+            float m02 = this[0, 2] / s.Z;
+            float m10 = this[1, 0] / s.X;
+            float m11 = this[1, 1] / s.Y;
+            float m12 = this[1, 2] / s.Z;
+            float m20 = this[2, 0] / s.X;
+            float m21 = this[2, 1] / s.Y;
+            float m22 = this[2, 2] / s.Z;
+
+            Quaternion q = new Quaternion();
+            q.W = (float)Math.Sqrt(Math.Max(0, 1 + m00 + m11 + m22)) / 2;
+            q.X = (float)Math.Sqrt(Math.Max(0, 1 + m00 - m11 - m22)) / 2;
+            q.Y = (float)Math.Sqrt(Math.Max(0, 1 - m00 + m11 - m22)) / 2;
+            q.Z = (float)Math.Sqrt(Math.Max(0, 1 - m00 - m11 + m22)) / 2;
+            q.X *= (float)Math.Sign(q.X * (m21 - m12));
+            q.Y *= (float)Math.Sign(q.Y * (m02 - m20));
+            q.Z *= (float)Math.Sign(q.Z * (m10 - m01));
+
+            // q.Normalize()
+            float qMagnitude = (float)Math.Sqrt(q.W * q.W + q.X * q.X + q.Y * q.Y + q.Z * q.Z);
+            q.W /= qMagnitude;
+            q.X /= qMagnitude;
+            q.Y /= qMagnitude;
+            q.Z /= qMagnitude;
+
+            return q;
         }
 
         public static Matrix4x4 operator *(Matrix4x4 lhs, Matrix4x4 rhs)

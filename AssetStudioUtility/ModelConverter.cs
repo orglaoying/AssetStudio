@@ -400,7 +400,7 @@ namespace AssetStudio
                             // if (!string.IsNullOrEmpty(bone.Path))
                             {
                                 var convert = Matrix4x4.Scale(new Vector3(-1, 1, 1));
-                                bone.Matrix = convert * mesh.m_BindPose[i] * convert;
+                                bone.Matrix = convert * mesh.m_BindPose[i] * convert; //mesh.m_BindPose[i];// convert * mesh.m_BindPose[i] * convert;
                                 iMesh.BoneList.Add(bone);
                             }
                         }

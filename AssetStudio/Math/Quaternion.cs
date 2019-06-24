@@ -6,6 +6,9 @@ namespace AssetStudio
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     public struct Quaternion : IEquatable<Quaternion>
     {
+        public const float Rad2Deg = 57.29578f;
+
+
         public float X;
         public float Y;
         public float Z;
@@ -61,6 +64,38 @@ namespace AssetStudio
         public bool Equals(Quaternion other)
         {
             return X.Equals(other.X) && Y.Equals(other.Y) && Z.Equals(other.Z) && W.Equals(other.W);
+        }
+
+        public Vector3 QuaternionToEuler()
+        {
+            Vector3 result;
+
+            float test = X * Y + Z * W;
+            // singularity at north pole
+            if (test > 0.499)
+            {
+                result.X = 0;
+                result.Y = 2 * (float)Math.Atan2(X, W);
+                result.Z = (float)Math.PI / 2;
+            }
+            // singularity at south pole
+            else if (test < -0.499)
+            {
+                result.X = 0;
+                result.Y = (float)(-2 * Math.Atan2(X, W));
+                result.Z = (float)(-Math.PI / 2);
+            }
+            else
+            {
+                result.X = (float)(Rad2Deg * Math.Atan2(2 * X * W- 2 * Y * Z, 1 - 2 * X * X - 2 * Z * Z));
+                result.Y = (float)(Rad2Deg * Math.Atan2(2 * Y * W - 2 * X * Z, 1 - 2 * Y * Y - 2 * Z * Z));
+                result.Z = (float)(Rad2Deg * Math.Asin(2 * X * Y + 2 * Z * W));
+
+                if (result.X < 0) result.X += 360;
+                if (result.Y < 0) result.Y += 360;
+                if (result.Z < 0) result.Z += 360;
+            }
+            return result;
         }
 
         public static float Dot(Quaternion a, Quaternion b)
