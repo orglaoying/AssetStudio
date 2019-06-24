@@ -32,45 +32,45 @@ namespace AssetStudio
                 throw new ArgumentNullException(nameof(values));
             if (values.Length != 16)
                 throw new ArgumentOutOfRangeException(nameof(values), "There must be sixteen and only sixteen input values for Matrix.");
-            M00 = values[0];
-            M01 = values[1];
-            M02 = values[2];
-            M03 = values[3];
-
-            M10 = values[4];
-            M11 = values[5];
-            M12 = values[6];
-            M13 = values[7];
-
-            M20 = values[8];
-            M21 = values[9];
-            M22 = values[10];
-            M23 = values[11];
-
-            M30 = values[12];
-            M31 = values[13];
-            M32 = values[14];
-            M33 = values[15];
-
             //M00 = values[0];
-            //M10 = values[1];
-            //M20 = values[2];
-            //M30 = values[3];
+            //M01 = values[1];
+            //M02 = values[2];
+            //M03 = values[3];
 
-            //M01 = values[4];
+            //M10 = values[4];
             //M11 = values[5];
-            //M21 = values[6];
-            //M31 = values[7];
+            //M12 = values[6];
+            //M13 = values[7];
 
-            //M02 = values[8];
-            //M12 = values[9];
+            //M20 = values[8];
+            //M21 = values[9];
             //M22 = values[10];
-            //M32 = values[11];
+            //M23 = values[11];
 
-            //M03 = values[12];
-            //M13 = values[13];
-            //M23 = values[14];
+            //M30 = values[12];
+            //M31 = values[13];
+            //M32 = values[14];
             //M33 = values[15];
+
+            M00 = values[0];
+            M10 = values[1];
+            M20 = values[2];
+            M30 = values[3];
+
+            M01 = values[4];
+            M11 = values[5];
+            M21 = values[6];
+            M31 = values[7];
+
+            M02 = values[8];
+            M12 = values[9];
+            M22 = values[10];
+            M32 = values[11];
+
+            M03 = values[12];
+            M13 = values[13];
+            M23 = values[14];
+            M33 = values[15];
         }
 
         public float this[int row, int column]
