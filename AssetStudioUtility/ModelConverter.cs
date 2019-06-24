@@ -394,7 +394,8 @@ namespace AssetStudio
                             bone.Path = FixBonePath(path);
                             if (string.IsNullOrEmpty(bone.Path))
                             {
-                                bone.Path = mesh.m_Name + "_skin_" + i;
+                                //bone.Path = mesh.m_Name + "_skin_" + i;
+                                bone.Path = mesh.m_Name + "__" + boneHash;
                             }
                             // if (!string.IsNullOrEmpty(bone.Path))
                             {
