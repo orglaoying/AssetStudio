@@ -28,23 +28,18 @@ namespace AssetStudioGUI
             }
             eulerFilter.Checked = (bool)Properties.Settings.Default["eulerFilter"];
             filterPrecision.Value = (decimal)Properties.Settings.Default["filterPrecision"];
-            allFrames.Checked = (bool)Properties.Settings.Default["allFrames"];
-            allBones.Checked = (bool)Properties.Settings.Default["allBones"];
-            skins.Checked = (bool)Properties.Settings.Default["skins"];
+            exportAllNodes.Checked = (bool)Properties.Settings.Default["exportAllNodes"];
+            exportSkins.Checked = (bool)Properties.Settings.Default["exportSkins"];
+            exportAnimations.Checked = (bool)Properties.Settings.Default["exportAnimations"];
+            exportBlendShape.Checked = (bool)Properties.Settings.Default["exportBlendShape"];
+            castToBone.Checked = (bool)Properties.Settings.Default["castToBone"];
             boneSize.Value = (decimal)Properties.Settings.Default["boneSize"];
             scaleFactor.Value = (decimal)Properties.Settings.Default["scaleFactor"];
-            flatInbetween.Checked = (bool)Properties.Settings.Default["flatInbetween"];
             fbxVersion.SelectedIndex = (int)Properties.Settings.Default["fbxVersion"];
             fbxFormat.SelectedIndex = (int)Properties.Settings.Default["fbxFormat"];
         }
 
-        private void exportOpnions_CheckedChanged(object sender, EventArgs e)
-        {
-            Properties.Settings.Default[((CheckBox)sender).Name] = ((CheckBox)sender).Checked;
-            Properties.Settings.Default.Save();
-        }
-
-        private void fbxOKbutton_Click(object sender, EventArgs e)
+        private void OKbutton_Click(object sender, EventArgs e)
         {
             Properties.Settings.Default["convertTexture"] = converttexture.Checked;
             Properties.Settings.Default["convertAudio"] = convertAudio.Checked;
@@ -58,12 +53,13 @@ namespace AssetStudioGUI
             }
             Properties.Settings.Default["eulerFilter"] = eulerFilter.Checked;
             Properties.Settings.Default["filterPrecision"] = filterPrecision.Value;
-            Properties.Settings.Default["allFrames"] = allFrames.Checked;
-            Properties.Settings.Default["allBones"] = allBones.Checked;
-            Properties.Settings.Default["skins"] = skins.Checked;
+            Properties.Settings.Default["exportAllNodes"] = exportAllNodes.Checked;
+            Properties.Settings.Default["exportSkins"] = exportSkins.Checked;
+            Properties.Settings.Default["exportAnimations"] = exportAnimations.Checked;
+            Properties.Settings.Default["exportBlendShape"] = exportBlendShape.Checked;
+            Properties.Settings.Default["castToBone"] = castToBone.Checked;
             Properties.Settings.Default["boneSize"] = boneSize.Value;
             Properties.Settings.Default["scaleFactor"] = scaleFactor.Value;
-            Properties.Settings.Default["flatInbetween"] = flatInbetween.Checked;
             Properties.Settings.Default["fbxVersion"] = fbxVersion.SelectedIndex;
             Properties.Settings.Default["fbxFormat"] = fbxFormat.SelectedIndex;
             Properties.Settings.Default.Save();

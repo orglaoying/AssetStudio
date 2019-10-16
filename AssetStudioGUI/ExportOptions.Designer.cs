@@ -38,20 +38,21 @@
             this.tobmp = new System.Windows.Forms.RadioButton();
             this.converttexture = new System.Windows.Forms.CheckBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.exportBlendShape = new System.Windows.Forms.CheckBox();
+            this.exportAnimations = new System.Windows.Forms.CheckBox();
             this.scaleFactor = new System.Windows.Forms.NumericUpDown();
             this.label5 = new System.Windows.Forms.Label();
             this.fbxFormat = new System.Windows.Forms.ComboBox();
             this.label4 = new System.Windows.Forms.Label();
             this.fbxVersion = new System.Windows.Forms.ComboBox();
             this.label3 = new System.Windows.Forms.Label();
-            this.flatInbetween = new System.Windows.Forms.CheckBox();
             this.boneSize = new System.Windows.Forms.NumericUpDown();
             this.label2 = new System.Windows.Forms.Label();
-            this.skins = new System.Windows.Forms.CheckBox();
+            this.exportSkins = new System.Windows.Forms.CheckBox();
             this.label1 = new System.Windows.Forms.Label();
             this.filterPrecision = new System.Windows.Forms.NumericUpDown();
-            this.allBones = new System.Windows.Forms.CheckBox();
-            this.allFrames = new System.Windows.Forms.CheckBox();
+            this.castToBone = new System.Windows.Forms.CheckBox();
+            this.exportAllNodes = new System.Windows.Forms.CheckBox();
             this.eulerFilter = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.panel1.SuspendLayout();
@@ -63,18 +64,18 @@
             // 
             // OKbutton
             // 
-            this.OKbutton.Location = new System.Drawing.Point(321, 267);
+            this.OKbutton.Location = new System.Drawing.Point(321, 293);
             this.OKbutton.Name = "OKbutton";
             this.OKbutton.Size = new System.Drawing.Size(75, 21);
             this.OKbutton.TabIndex = 6;
             this.OKbutton.Text = "OK";
             this.OKbutton.UseVisualStyleBackColor = true;
-            this.OKbutton.Click += new System.EventHandler(this.fbxOKbutton_Click);
+            this.OKbutton.Click += new System.EventHandler(this.OKbutton_Click);
             // 
             // Cancel
             // 
             this.Cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.Cancel.Location = new System.Drawing.Point(402, 267);
+            this.Cancel.Location = new System.Drawing.Point(402, 293);
             this.Cancel.Name = "Cancel";
             this.Cancel.Size = new System.Drawing.Size(75, 21);
             this.Cancel.TabIndex = 7;
@@ -164,27 +165,52 @@
             // groupBox2
             // 
             this.groupBox2.AutoSize = true;
+            this.groupBox2.Controls.Add(this.exportBlendShape);
+            this.groupBox2.Controls.Add(this.exportAnimations);
             this.groupBox2.Controls.Add(this.scaleFactor);
             this.groupBox2.Controls.Add(this.label5);
             this.groupBox2.Controls.Add(this.fbxFormat);
             this.groupBox2.Controls.Add(this.label4);
             this.groupBox2.Controls.Add(this.fbxVersion);
             this.groupBox2.Controls.Add(this.label3);
-            this.groupBox2.Controls.Add(this.flatInbetween);
             this.groupBox2.Controls.Add(this.boneSize);
             this.groupBox2.Controls.Add(this.label2);
-            this.groupBox2.Controls.Add(this.skins);
+            this.groupBox2.Controls.Add(this.exportSkins);
             this.groupBox2.Controls.Add(this.label1);
             this.groupBox2.Controls.Add(this.filterPrecision);
-            this.groupBox2.Controls.Add(this.allBones);
-            this.groupBox2.Controls.Add(this.allFrames);
+            this.groupBox2.Controls.Add(this.castToBone);
+            this.groupBox2.Controls.Add(this.exportAllNodes);
             this.groupBox2.Controls.Add(this.eulerFilter);
             this.groupBox2.Location = new System.Drawing.Point(12, 12);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(214, 276);
+            this.groupBox2.Size = new System.Drawing.Size(214, 302);
             this.groupBox2.TabIndex = 11;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Fbx";
+            // 
+            // exportBlendShape
+            // 
+            this.exportBlendShape.AutoSize = true;
+            this.exportBlendShape.Checked = true;
+            this.exportBlendShape.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.exportBlendShape.Location = new System.Drawing.Point(6, 127);
+            this.exportBlendShape.Name = "exportBlendShape";
+            this.exportBlendShape.Size = new System.Drawing.Size(126, 16);
+            this.exportBlendShape.TabIndex = 22;
+            this.exportBlendShape.Text = "Export blendshape";
+            this.exportBlendShape.UseVisualStyleBackColor = true;
+            // 
+            // exportAnimations
+            // 
+            this.exportAnimations.AutoSize = true;
+            this.exportAnimations.Checked = true;
+            this.exportAnimations.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.exportAnimations.Location = new System.Drawing.Point(6, 105);
+            this.exportAnimations.Name = "exportAnimations";
+            this.exportAnimations.Size = new System.Drawing.Size(126, 16);
+            this.exportAnimations.TabIndex = 21;
+            this.exportAnimations.Text = "Export animations";
+            this.exportAnimations.UseVisualStyleBackColor = true;
             // 
             // scaleFactor
             // 
@@ -194,7 +220,7 @@
             0,
             0,
             131072});
-            this.scaleFactor.Location = new System.Drawing.Point(83, 155);
+            this.scaleFactor.Location = new System.Drawing.Point(83, 202);
             this.scaleFactor.Name = "scaleFactor";
             this.scaleFactor.Size = new System.Drawing.Size(60, 21);
             this.scaleFactor.TabIndex = 20;
@@ -208,7 +234,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(6, 157);
+            this.label5.Location = new System.Drawing.Point(6, 204);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(71, 12);
             this.label5.TabIndex = 19;
@@ -221,7 +247,7 @@
             this.fbxFormat.Items.AddRange(new object[] {
             "Binary",
             "Ascii"});
-            this.fbxFormat.Location = new System.Drawing.Point(75, 207);
+            this.fbxFormat.Location = new System.Drawing.Point(77, 233);
             this.fbxFormat.Name = "fbxFormat";
             this.fbxFormat.Size = new System.Drawing.Size(61, 20);
             this.fbxFormat.TabIndex = 18;
@@ -229,7 +255,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(4, 210);
+            this.label4.Location = new System.Drawing.Point(6, 236);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(59, 12);
             this.label4.TabIndex = 17;
@@ -246,7 +272,7 @@
             "7.3",
             "7.4",
             "7.5"});
-            this.fbxVersion.Location = new System.Drawing.Point(75, 236);
+            this.fbxVersion.Location = new System.Drawing.Point(77, 262);
             this.fbxVersion.Name = "fbxVersion";
             this.fbxVersion.Size = new System.Drawing.Size(47, 20);
             this.fbxVersion.TabIndex = 16;
@@ -254,25 +280,15 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(4, 239);
+            this.label3.Location = new System.Drawing.Point(6, 265);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(65, 12);
             this.label3.TabIndex = 15;
             this.label3.Text = "FBXVersion";
             // 
-            // flatInbetween
-            // 
-            this.flatInbetween.AutoSize = true;
-            this.flatInbetween.Location = new System.Drawing.Point(6, 182);
-            this.flatInbetween.Name = "flatInbetween";
-            this.flatInbetween.Size = new System.Drawing.Size(102, 16);
-            this.flatInbetween.TabIndex = 12;
-            this.flatInbetween.Text = "FlatInbetween";
-            this.flatInbetween.UseVisualStyleBackColor = true;
-            // 
             // boneSize
             // 
-            this.boneSize.Location = new System.Drawing.Point(65, 128);
+            this.boneSize.Location = new System.Drawing.Point(65, 175);
             this.boneSize.Name = "boneSize";
             this.boneSize.Size = new System.Drawing.Size(46, 21);
             this.boneSize.TabIndex = 11;
@@ -285,23 +301,23 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(6, 130);
+            this.label2.Location = new System.Drawing.Point(6, 177);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(53, 12);
             this.label2.TabIndex = 10;
             this.label2.Text = "BoneSize";
             // 
-            // skins
+            // exportSkins
             // 
-            this.skins.AutoSize = true;
-            this.skins.Checked = true;
-            this.skins.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.skins.Location = new System.Drawing.Point(6, 105);
-            this.skins.Name = "skins";
-            this.skins.Size = new System.Drawing.Size(54, 16);
-            this.skins.TabIndex = 8;
-            this.skins.Text = "Skins";
-            this.skins.UseVisualStyleBackColor = true;
+            this.exportSkins.AutoSize = true;
+            this.exportSkins.Checked = true;
+            this.exportSkins.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.exportSkins.Location = new System.Drawing.Point(6, 83);
+            this.exportSkins.Name = "exportSkins";
+            this.exportSkins.Size = new System.Drawing.Size(96, 16);
+            this.exportSkins.TabIndex = 8;
+            this.exportSkins.Text = "Export skins";
+            this.exportSkins.UseVisualStyleBackColor = true;
             // 
             // label1
             // 
@@ -330,27 +346,27 @@
             0,
             131072});
             // 
-            // allBones
+            // castToBone
             // 
-            this.allBones.AutoSize = true;
-            this.allBones.Checked = true;
-            this.allBones.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.allBones.Location = new System.Drawing.Point(6, 83);
-            this.allBones.Name = "allBones";
-            this.allBones.Size = new System.Drawing.Size(72, 16);
-            this.allBones.TabIndex = 5;
-            this.allBones.Text = "AllBones";
-            this.allBones.UseVisualStyleBackColor = true;
+            this.castToBone.AutoSize = true;
+            this.castToBone.Location = new System.Drawing.Point(6, 149);
+            this.castToBone.Name = "castToBone";
+            this.castToBone.Size = new System.Drawing.Size(156, 16);
+            this.castToBone.TabIndex = 5;
+            this.castToBone.Text = "All nodes cast to bone";
+            this.castToBone.UseVisualStyleBackColor = true;
             // 
-            // allFrames
+            // exportAllNodes
             // 
-            this.allFrames.AutoSize = true;
-            this.allFrames.Location = new System.Drawing.Point(6, 61);
-            this.allFrames.Name = "allFrames";
-            this.allFrames.Size = new System.Drawing.Size(78, 16);
-            this.allFrames.TabIndex = 4;
-            this.allFrames.Text = "AllFrames";
-            this.allFrames.UseVisualStyleBackColor = true;
+            this.exportAllNodes.AutoSize = true;
+            this.exportAllNodes.Checked = true;
+            this.exportAllNodes.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.exportAllNodes.Location = new System.Drawing.Point(6, 61);
+            this.exportAllNodes.Name = "exportAllNodes";
+            this.exportAllNodes.Size = new System.Drawing.Size(120, 16);
+            this.exportAllNodes.TabIndex = 4;
+            this.exportAllNodes.Text = "Export all nodes";
+            this.exportAllNodes.UseVisualStyleBackColor = true;
             // 
             // eulerFilter
             // 
@@ -370,7 +386,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.Cancel;
-            this.ClientSize = new System.Drawing.Size(490, 301);
+            this.ClientSize = new System.Drawing.Size(490, 328);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.Cancel);
@@ -408,14 +424,13 @@
         private System.Windows.Forms.CheckBox convertAudio;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.GroupBox groupBox2;
-        private System.Windows.Forms.CheckBox flatInbetween;
         private System.Windows.Forms.NumericUpDown boneSize;
         private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.CheckBox skins;
+        private System.Windows.Forms.CheckBox exportSkins;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.NumericUpDown filterPrecision;
-        private System.Windows.Forms.CheckBox allBones;
-        private System.Windows.Forms.CheckBox allFrames;
+        private System.Windows.Forms.CheckBox castToBone;
+        private System.Windows.Forms.CheckBox exportAllNodes;
         private System.Windows.Forms.CheckBox eulerFilter;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.ComboBox fbxVersion;
@@ -423,5 +438,7 @@
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.NumericUpDown scaleFactor;
         private System.Windows.Forms.Label label5;
+        private System.Windows.Forms.CheckBox exportBlendShape;
+        private System.Windows.Forms.CheckBox exportAnimations;
     }
 }
