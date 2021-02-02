@@ -13,10 +13,10 @@ namespace AssetStudio
         public string fullName;
         public string originalPath;
         public string fileName;
-        public string upperFileName;
         public int[] version = { 0, 0, 0, 0 };
         public BuildType buildType;
-        public Dictionary<long, Object> Objects;
+        public List<Object> Objects;
+        public Dictionary<long, Object> ObjectsDic;
 
         public SerializedFileHeader header;
         private EndianType m_FileEndianess;
@@ -24,6 +24,7 @@ namespace AssetStudio
         public BuildTarget m_TargetPlatform = BuildTarget.UnknownPlatform;
         private bool m_EnableTypeTree = true;
         public List<SerializedType> m_Types;
+        public List<SerializedType> m_RefTypes;
         public List<ObjectInfo> m_Objects;
         private List<LocalSerializedObjectIdentifier> m_ScriptTypes;
         public List<FileIdentifier> m_Externals;
@@ -34,7 +35,6 @@ namespace AssetStudio
             this.reader = reader;
             this.fullName = fullName;
             fileName = Path.GetFileName(fullName);
-            upperFileName = fileName.ToUpper();
 
             //ReadHeader
             header = new SerializedFileHeader();
@@ -53,6 +53,14 @@ namespace AssetStudio
             {
                 reader.Position = header.m_FileSize - header.m_MetadataSize;
                 m_FileEndianess = (EndianType)reader.ReadByte();
+            }
+
+            if (header.m_Version >= 22)
+            {
+                header.m_MetadataSize = reader.ReadUInt32();
+                header.m_FileSize = reader.ReadInt64();
+                header.m_DataOffset = reader.ReadInt64();
+                reader.ReadInt64(); // unknown
             }
 
             //ReadMetadata
@@ -86,18 +94,25 @@ namespace AssetStudio
                 m_Types.Add(ReadSerializedType());
             }
 
+            var bigIDEnabled = 0;
             if (header.m_Version >= 7 && header.m_Version < 14)
             {
-                var bigIDEnabled = reader.ReadInt32();
+                bigIDEnabled = reader.ReadInt32();
             }
 
             //ReadObjects
             int objectCount = reader.ReadInt32();
             m_Objects = new List<ObjectInfo>(objectCount);
+            Objects = new List<Object>(objectCount);
+            ObjectsDic = new Dictionary<long, Object>(objectCount);
             for (int i = 0; i < objectCount; i++)
             {
                 var objectInfo = new ObjectInfo();
-                if (header.m_Version < 14)
+                if (bigIDEnabled != 0)
+                {
+                    objectInfo.m_PathID = reader.ReadInt64();
+                }
+                else if (header.m_Version < 14)
                 {
                     objectInfo.m_PathID = reader.ReadInt32();
                 }
@@ -106,7 +121,12 @@ namespace AssetStudio
                     reader.AlignStream();
                     objectInfo.m_PathID = reader.ReadInt64();
                 }
-                objectInfo.byteStart = reader.ReadUInt32();
+
+                if (header.m_Version >= 22)
+                    objectInfo.byteStart = reader.ReadInt64();
+                else
+                    objectInfo.byteStart = reader.ReadUInt32();
+
                 objectInfo.byteStart += header.m_DataOffset;
                 objectInfo.byteSize = reader.ReadUInt32();
                 objectInfo.typeID = reader.ReadInt32();
@@ -114,13 +134,22 @@ namespace AssetStudio
                 {
                     objectInfo.classID = reader.ReadUInt16();
                     objectInfo.serializedType = m_Types.Find(x => x.classID == objectInfo.typeID);
-                    var isDestroyed = reader.ReadUInt16();
                 }
                 else
                 {
                     var type = m_Types[objectInfo.typeID];
                     objectInfo.serializedType = type;
                     objectInfo.classID = type.classID;
+                }
+                if (header.m_Version < 11)
+                {
+                    var isDestroyed = reader.ReadUInt16();
+                }
+                if (header.m_Version >= 11 && header.m_Version < 17)
+                {
+                    var m_ScriptTypeIndex = reader.ReadInt16();
+                    if (objectInfo.serializedType != null)
+                        objectInfo.serializedType.m_ScriptTypeIndex = m_ScriptTypeIndex;
                 }
                 if (header.m_Version == 15 || header.m_Version == 16)
                 {
@@ -169,10 +198,22 @@ namespace AssetStudio
                 m_Externals.Add(m_External);
             }
 
+            if (header.m_Version >= 20)
+            {
+                int refTypesCount = reader.ReadInt32();
+                m_RefTypes = new List<SerializedType>(refTypesCount);
+                for (int i = 0; i < refTypesCount; i++)
+                {
+                    m_RefTypes.Add(ReadSerializedType());
+                }
+            }
+
             if (header.m_Version >= 5)
             {
-                //var userInformation = reader.ReadStringToNull();
+                var userInformation = reader.ReadStringToNull();
             }
+
+            //reader.AlignStream(16);
         }
 
         public void SetVersion(string stringVersion)
@@ -214,11 +255,16 @@ namespace AssetStudio
                 var typeTree = new List<TypeTreeNode>();
                 if (header.m_Version >= 12 || header.m_Version == 10)
                 {
-                    ReadTypeTree5(typeTree);
+                    TypeTreeBlobRead(typeTree);
                 }
                 else
                 {
                     ReadTypeTree(typeTree);
+                }
+
+                if (header.m_Version >= 21)
+                {
+                    type.m_TypeDependencies = reader.ReadInt32Array();
                 }
 
                 type.m_Nodes = typeTree;
@@ -257,42 +303,37 @@ namespace AssetStudio
             }
         }
 
-        private void ReadTypeTree5(List<TypeTreeNode> typeTree)
+        private void TypeTreeBlobRead(List<TypeTreeNode> typeTree)
         {
             int numberOfNodes = reader.ReadInt32();
             int stringBufferSize = reader.ReadInt32();
-
-            var nodeSize = 24;
-            if (header.m_Version > 17)
+            for (int i = 0; i < numberOfNodes; i++)
             {
-                nodeSize = 32;
+                var typeTreeNode = new TypeTreeNode();
+                typeTree.Add(typeTreeNode);
+                typeTreeNode.m_Version = reader.ReadUInt16();
+                typeTreeNode.m_Level = reader.ReadByte();
+                typeTreeNode.m_IsArray = reader.ReadBoolean() ? 1 : 0;
+                typeTreeNode.m_TypeStrOffset = reader.ReadUInt32();
+                typeTreeNode.m_NameStrOffset = reader.ReadUInt32();
+                typeTreeNode.m_ByteSize = reader.ReadInt32();
+                typeTreeNode.m_Index = reader.ReadInt32();
+                typeTreeNode.m_MetaFlag = reader.ReadInt32();
+                if (header.m_Version >= 19)
+                {
+                    typeTreeNode.m_RefTypeHash = reader.ReadUInt64();
+                }
             }
-            reader.Position += numberOfNodes * nodeSize;
-            using (var stringBufferReader = new BinaryReader(new MemoryStream(reader.ReadBytes(stringBufferSize))))
+            var m_StringBuffer = reader.ReadBytes(stringBufferSize);
+
+            using (var stringBufferReader = new BinaryReader(new MemoryStream(m_StringBuffer)))
             {
-                reader.Position -= numberOfNodes * nodeSize + stringBufferSize;
                 for (int i = 0; i < numberOfNodes; i++)
                 {
-                    var typeTreeNode = new TypeTreeNode();
-                    typeTree.Add(typeTreeNode);
-                    typeTreeNode.m_Version = reader.ReadUInt16();
-                    typeTreeNode.m_Level = reader.ReadByte();
-                    typeTreeNode.m_IsArray = reader.ReadBoolean() ? 1 : 0;
-                    typeTreeNode.m_TypeStrOffset = reader.ReadUInt32();
-                    typeTreeNode.m_NameStrOffset = reader.ReadUInt32();
-                    typeTreeNode.m_ByteSize = reader.ReadInt32();
-                    typeTreeNode.m_Index = reader.ReadInt32();
-                    typeTreeNode.m_MetaFlag = reader.ReadInt32();
-
-                    if (header.m_Version > 17)
-                    {
-                        reader.Position += 8;
-                    }
-
+                    var typeTreeNode = typeTree[i];
                     typeTreeNode.m_Type = ReadString(stringBufferReader, typeTreeNode.m_TypeStrOffset);
                     typeTreeNode.m_Name = ReadString(stringBufferReader, typeTreeNode.m_NameStrOffset);
                 }
-                reader.Position += stringBufferSize;
             }
 
             string ReadString(BinaryReader stringBufferReader, uint value)
@@ -310,6 +351,49 @@ namespace AssetStudio
                 }
                 return offset.ToString();
             }
+        }
+
+        public void AddObject(Object obj)
+        {
+            Objects.Add(obj);
+            ObjectsDic.Add(obj.m_PathID, obj);
+        }
+
+        public static bool IsSerializedFile(EndianBinaryReader reader)
+        {
+            var fileSize = reader.BaseStream.Length;
+            if (fileSize < 20)
+            {
+                return false;
+            }
+            var m_MetadataSize = reader.ReadUInt32();
+            long m_FileSize = reader.ReadUInt32();
+            var m_Version = reader.ReadUInt32();
+            long m_DataOffset = reader.ReadUInt32();
+            var m_Endianess = reader.ReadByte();
+            var m_Reserved = reader.ReadBytes(3);
+            if (m_Version >= 22)
+            {
+                if (fileSize < 48)
+                {
+                    return false;
+                }
+                m_MetadataSize = reader.ReadUInt32();
+                m_FileSize = reader.ReadInt64();
+                m_DataOffset = reader.ReadInt64();
+            }
+            if (m_FileSize != fileSize)
+            {
+                reader.Position = 0;
+                return false;
+            }
+            if (m_DataOffset > fileSize)
+            {
+                reader.Position = 0;
+                return false;
+            }
+            reader.Position = 0;
+            return true;
         }
     }
 }

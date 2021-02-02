@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 
 namespace AssetStudio
@@ -32,6 +31,12 @@ namespace AssetStudio
         kSPMRectangle
     };
 
+    public enum SpriteMeshType
+    {
+        kSpriteMeshTypeFullRect,
+        kSpriteMeshTypeTight
+    };
+
     public class SpriteSettings
     {
         public uint settingsRaw;
@@ -39,6 +44,7 @@ namespace AssetStudio
         public uint packed;
         public SpritePackingMode packingMode;
         public SpritePackingRotation packingRotation;
+        public SpriteMeshType meshType;
 
         public SpriteSettings(BinaryReader reader)
         {
@@ -47,8 +53,7 @@ namespace AssetStudio
             packed = settingsRaw & 1; //1
             packingMode = (SpritePackingMode)((settingsRaw >> 1) & 1); //1
             packingRotation = (SpritePackingRotation)((settingsRaw >> 2) & 0xf); //4
-
-            //meshType = (settingsRaw >> 6) & 1; //1
+            meshType = (SpriteMeshType)((settingsRaw >> 6) & 1); //1
             //reserved
         }
     }
@@ -82,7 +87,7 @@ namespace AssetStudio
         public ushort[] indices;
         public Matrix4x4[] m_Bindpose;
         public BoneWeights4[] m_SourceSkin;
-        public RectangleF textureRect;
+        public Rectf textureRect;
         public Vector2 textureRectOffset;
         public Vector2 atlasRectOffset;
         public SpriteSettings settingsRaw;
@@ -118,7 +123,7 @@ namespace AssetStudio
                     m_SubMeshes[i] = new SubMesh(reader);
                 }
 
-                m_IndexBuffer = reader.ReadBytes(reader.ReadInt32());
+                m_IndexBuffer = reader.ReadUInt8Array();
                 reader.AlignStream();
 
                 m_VertexData = new VertexData(reader);
@@ -150,7 +155,7 @@ namespace AssetStudio
                 }
             }
 
-            textureRect = reader.ReadRectangleF();
+            textureRect = new Rectf(reader);
             textureRectOffset = reader.ReadVector2();
             if (version[0] > 5 || (version[0] == 5 && version[1] >= 6)) //5.6 and up
             {
@@ -170,9 +175,25 @@ namespace AssetStudio
         }
     }
 
+    public class Rectf
+    {
+        public float x;
+        public float y;
+        public float width;
+        public float height;
+
+        public Rectf(BinaryReader reader)
+        {
+            x = reader.ReadSingle();
+            y = reader.ReadSingle();
+            width = reader.ReadSingle();
+            height = reader.ReadSingle();
+        }
+    }
+
     public sealed class Sprite : NamedObject
     {
-        public RectangleF m_Rect;
+        public Rectf m_Rect;
         public Vector2 m_Offset;
         public Vector4 m_Border;
         public float m_PixelsToUnits;
@@ -187,7 +208,7 @@ namespace AssetStudio
 
         public Sprite(ObjectReader reader) : base(reader)
         {
-            m_Rect = reader.ReadRectangleF();
+            m_Rect = new Rectf(reader);
             m_Offset = reader.ReadVector2();
             if (version[0] > 4 || (version[0] == 4 && version[1] >= 5)) //4.5 and up
             {

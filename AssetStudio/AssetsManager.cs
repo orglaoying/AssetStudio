@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using static AssetStudio.ImportHelper;
@@ -8,12 +9,12 @@ namespace AssetStudio
     public class AssetsManager
     {
         public List<SerializedFile> assetsFileList = new List<SerializedFile>();
-        internal Dictionary<string, int> assetsFileIndexCache = new Dictionary<string, int>();
-        internal Dictionary<string, EndianBinaryReader> resourceFileReaders = new Dictionary<string, EndianBinaryReader>();
+        internal Dictionary<string, int> assetsFileIndexCache = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        internal Dictionary<string, BinaryReader> resourceFileReaders = new Dictionary<string, BinaryReader>(StringComparer.OrdinalIgnoreCase);
 
         private List<string> importFiles = new List<string>();
-        private HashSet<string> importFilesHash = new HashSet<string>();
-        private HashSet<string> assetsFileListHash = new HashSet<string>();
+        private HashSet<string> importFilesHash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private HashSet<string> assetsFileListHash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public void LoadFiles(params string[] files)
         {
@@ -36,7 +37,7 @@ namespace AssetStudio
             foreach (var file in files)
             {
                 importFiles.Add(file);
-                importFilesHash.Add(Path.GetFileName(file).ToUpper());
+                importFilesHash.Add(Path.GetFileName(file));
             }
 
             Progress.Reset();
@@ -74,21 +75,21 @@ namespace AssetStudio
         private void LoadAssetsFile(string fullName, EndianBinaryReader reader)
         {
             var fileName = Path.GetFileName(fullName);
-            if (!assetsFileListHash.Contains(fileName.ToUpper()))
+            if (!assetsFileListHash.Contains(fileName))
             {
                 Logger.Info($"Loading {fileName}");
                 try
                 {
                     var assetsFile = new SerializedFile(this, fullName, reader);
                     assetsFileList.Add(assetsFile);
-                    assetsFileListHash.Add(assetsFile.upperFileName);
+                    assetsFileListHash.Add(assetsFile.fileName);
 
                     foreach (var sharedFile in assetsFile.m_Externals)
                     {
-                        var sharedFilePath = Path.GetDirectoryName(fullName) + "\\" + sharedFile.fileName;
+                        var sharedFilePath = Path.Combine(Path.GetDirectoryName(fullName), sharedFile.fileName);
                         var sharedFileName = sharedFile.fileName;
 
-                        if (!importFilesHash.Contains(sharedFileName.ToUpper()))
+                        if (!importFilesHash.Contains(sharedFileName))
                         {
                             if (!File.Exists(sharedFilePath))
                             {
@@ -102,7 +103,7 @@ namespace AssetStudio
                             if (File.Exists(sharedFilePath))
                             {
                                 importFiles.Add(sharedFilePath);
-                                importFilesHash.Add(sharedFileName.ToUpper());
+                                importFilesHash.Add(sharedFileName);
                             }
                         }
                     }
@@ -110,7 +111,7 @@ namespace AssetStudio
                 catch
                 {
                     reader.Dispose();
-                    //Logger.Error($"Unable to load assets file {fileName}");
+                    //Logger.Warning($"Unable to load assets file {fileName}");
                 }
             }
             else
@@ -121,8 +122,8 @@ namespace AssetStudio
 
         private void LoadAssetsFromMemory(string fullName, EndianBinaryReader reader, string originalPath, string unityVersion = null)
         {
-            var upperFileName = Path.GetFileName(fullName).ToUpper();
-            if (!assetsFileListHash.Contains(upperFileName))
+            var fileName = Path.GetFileName(fullName);
+            if (!assetsFileListHash.Contains(fileName))
             {
                 try
                 {
@@ -133,15 +134,12 @@ namespace AssetStudio
                         assetsFile.SetVersion(unityVersion);
                     }
                     assetsFileList.Add(assetsFile);
-                    assetsFileListHash.Add(assetsFile.upperFileName);
+                    assetsFileListHash.Add(assetsFile.fileName);
                 }
                 catch
                 {
                     //Logger.Error($"Unable to load assets file {fileName} from {Path.GetFileName(originalPath)}");
-                }
-                finally
-                {
-                    resourceFileReaders.Add(upperFileName, reader);
+                    resourceFileReaders.Add(fileName, reader);
                 }
             }
         }
@@ -155,8 +153,16 @@ namespace AssetStudio
                 var bundleFile = new BundleFile(reader, fullName);
                 foreach (var file in bundleFile.fileList)
                 {
-                    var dummyPath = Path.GetDirectoryName(fullName) + "\\" + file.fileName;
-                    LoadAssetsFromMemory(dummyPath, new EndianBinaryReader(file.stream), parentPath ?? fullName, bundleFile.versionEngine);
+                    var subReader = new EndianBinaryReader(file.stream);
+                    if (SerializedFile.IsSerializedFile(subReader))
+                    {
+                        var dummyPath = Path.GetDirectoryName(fullName) + Path.DirectorySeparatorChar + file.fileName;
+                        LoadAssetsFromMemory(dummyPath, subReader, parentPath ?? fullName, bundleFile.m_Header.unityRevision);
+                    }
+                    else
+                    {
+                        resourceFileReaders.Add(file.fileName, subReader);
+                    }
                 }
             }
             catch
@@ -183,7 +189,7 @@ namespace AssetStudio
                 var webFile = new WebFile(reader);
                 foreach (var file in webFile.fileList)
                 {
-                    var dummyPath = Path.GetDirectoryName(fullName) + "\\" + file.fileName;
+                    var dummyPath = Path.Combine(Path.GetDirectoryName(fullName), file.fileName);
                     switch (CheckFileType(file.stream, out var fileReader))
                     {
                         case FileType.AssetsFile:
@@ -194,6 +200,9 @@ namespace AssetStudio
                             break;
                         case FileType.WebFile:
                             LoadWebFile(dummyPath, fileReader);
+                            break;
+                        case FileType.ResourceFile:
+                            resourceFileReaders.Add(file.fileName, fileReader);
                             break;
                     }
                 }
@@ -235,96 +244,113 @@ namespace AssetStudio
             Progress.Reset();
             foreach (var assetsFile in assetsFileList)
             {
-                assetsFile.Objects = new Dictionary<long, Object>(assetsFile.m_Objects.Count);
                 foreach (var objectInfo in assetsFile.m_Objects)
                 {
                     var objectReader = new ObjectReader(assetsFile.reader, assetsFile, objectInfo);
-                    switch (objectReader.type)
+                    try
                     {
-                        case ClassIDType.Animation:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Animation(objectReader));
-                            break;
-                        case ClassIDType.AnimationClip:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new AnimationClip(objectReader));
-                            break;
-                        case ClassIDType.Animator:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Animator(objectReader));
-                            break;
-                        case ClassIDType.AnimatorController:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new AnimatorController(objectReader));
-                            break;
-                        case ClassIDType.AnimatorOverrideController:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new AnimatorOverrideController(objectReader));
-                            break;
-                        case ClassIDType.AssetBundle:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new AssetBundle(objectReader));
-                            break;
-                        case ClassIDType.AudioClip:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new AudioClip(objectReader));
-                            break;
-                        case ClassIDType.Avatar:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Avatar(objectReader));
-                            break;
-                        case ClassIDType.Font:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Font(objectReader));
-                            break;
-                        case ClassIDType.GameObject:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new GameObject(objectReader));
-                            break;
-                        case ClassIDType.Material:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Material(objectReader));
-                            break;
-                        case ClassIDType.Mesh:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Mesh(objectReader));
-                            break;
-                        case ClassIDType.MeshFilter:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new MeshFilter(objectReader));
-                            break;
-                        case ClassIDType.MeshRenderer:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new MeshRenderer(objectReader));
-                            break;
-                        case ClassIDType.MonoBehaviour:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new MonoBehaviour(objectReader));
-                            break;
-                        case ClassIDType.MonoScript:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new MonoScript(objectReader));
-                            break;
-                        case ClassIDType.MovieTexture:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new MovieTexture(objectReader));
-                            break;
-                        case ClassIDType.PlayerSettings:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new PlayerSettings(objectReader));
-                            break;
-                        case ClassIDType.RectTransform:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new RectTransform(objectReader));
-                            break;
-                        case ClassIDType.Shader:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Shader(objectReader));
-                            break;
-                        case ClassIDType.SkinnedMeshRenderer:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new SkinnedMeshRenderer(objectReader));
-                            break;
-                        case ClassIDType.Sprite:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Sprite(objectReader));
-                            break;
-                        case ClassIDType.SpriteAtlas:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new SpriteAtlas(objectReader));
-                            break;
-                        case ClassIDType.TextAsset:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new TextAsset(objectReader));
-                            break;
-                        case ClassIDType.Texture2D:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Texture2D(objectReader));
-                            break;
-                        case ClassIDType.Transform:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Transform(objectReader));
-                            break;
-                        case ClassIDType.VideoClip:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new VideoClip(objectReader));
-                            break;
-                        default:
-                            assetsFile.Objects.Add(objectInfo.m_PathID, new Object(objectReader));
-                            break;
+                        Object obj;
+                        switch (objectReader.type)
+                        {
+                            case ClassIDType.Animation:
+                                obj = new Animation(objectReader);
+                                break;
+                            case ClassIDType.AnimationClip:
+                                obj = new AnimationClip(objectReader);
+                                break;
+                            case ClassIDType.Animator:
+                                obj = new Animator(objectReader);
+                                break;
+                            case ClassIDType.AnimatorController:
+                                obj = new AnimatorController(objectReader);
+                                break;
+                            case ClassIDType.AnimatorOverrideController:
+                                obj = new AnimatorOverrideController(objectReader);
+                                break;
+                            case ClassIDType.AssetBundle:
+                                obj = new AssetBundle(objectReader);
+                                break;
+                            case ClassIDType.AudioClip:
+                                obj = new AudioClip(objectReader);
+                                break;
+                            case ClassIDType.Avatar:
+                                obj = new Avatar(objectReader);
+                                break;
+                            case ClassIDType.Font:
+                                obj = new Font(objectReader);
+                                break;
+                            case ClassIDType.GameObject:
+                                obj = new GameObject(objectReader);
+                                break;
+                            case ClassIDType.Material:
+                                obj = new Material(objectReader);
+                                break;
+                            case ClassIDType.Mesh:
+                                obj = new Mesh(objectReader);
+                                break;
+                            case ClassIDType.MeshFilter:
+                                obj = new MeshFilter(objectReader);
+                                break;
+                            case ClassIDType.MeshRenderer:
+                                obj = new MeshRenderer(objectReader);
+                                break;
+                            case ClassIDType.MonoBehaviour:
+                                obj = new MonoBehaviour(objectReader);
+                                break;
+                            case ClassIDType.MonoScript:
+                                obj = new MonoScript(objectReader);
+                                break;
+                            case ClassIDType.MovieTexture:
+                                obj = new MovieTexture(objectReader);
+                                break;
+                            case ClassIDType.PlayerSettings:
+                                obj = new PlayerSettings(objectReader);
+                                break;
+                            case ClassIDType.RectTransform:
+                                obj = new RectTransform(objectReader);
+                                break;
+                            case ClassIDType.Shader:
+                                obj = new Shader(objectReader);
+                                break;
+                            case ClassIDType.SkinnedMeshRenderer:
+                                obj = new SkinnedMeshRenderer(objectReader);
+                                break;
+                            case ClassIDType.Sprite:
+                                obj = new Sprite(objectReader);
+                                break;
+                            case ClassIDType.SpriteAtlas:
+                                obj = new SpriteAtlas(objectReader);
+                                break;
+                            case ClassIDType.TextAsset:
+                                obj = new TextAsset(objectReader);
+                                break;
+                            case ClassIDType.Texture2D:
+                                obj = new Texture2D(objectReader);
+                                break;
+                            case ClassIDType.Transform:
+                                obj = new Transform(objectReader);
+                                break;
+                            case ClassIDType.VideoClip:
+                                obj = new VideoClip(objectReader);
+                                break;
+                            case ClassIDType.ResourceManager:
+                                obj = new ResourceManager(objectReader);
+                                break;
+                            default:
+                                obj = new Object(objectReader);
+                                break;
+                        }
+                        assetsFile.AddObject(obj);
+                    }
+                    catch (Exception e)
+                    {
+                        /*var sb = new StringBuilder();
+                        sb.AppendLine("Unable to load object")
+                            .AppendLine($"Assets {assetsFile.fileName}")
+                            .AppendLine($"Type {objectReader.type}")
+                            .AppendLine($"PathID {objectInfo.m_PathID}")
+                            .Append(e);
+                        Logger.Error(sb.ToString());*/
                     }
 
                     Progress.Report(++i, progressCount);
@@ -338,7 +364,7 @@ namespace AssetStudio
 
             foreach (var assetsFile in assetsFileList)
             {
-                foreach (var obj in assetsFile.Objects.Values)
+                foreach (var obj in assetsFile.Objects)
                 {
                     if (obj is GameObject m_GameObject)
                     {

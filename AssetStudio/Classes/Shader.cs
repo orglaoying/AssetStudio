@@ -5,6 +5,16 @@ using System.Linq;
 
 namespace AssetStudio
 {
+    public class Hash128
+    {
+        public byte[] bytes;
+
+        public Hash128(BinaryReader reader)
+        {
+            bytes = reader.ReadBytes(16);
+        }
+    }
+
     public class StructParameter
     {
         public MatrixParameter[] m_MatrixParams;
@@ -201,6 +211,7 @@ namespace AssetStudio
         public SerializedShaderFloatValue zTest;
         public SerializedShaderFloatValue zWrite;
         public SerializedShaderFloatValue culling;
+        public SerializedShaderFloatValue conservative;
         public SerializedShaderFloatValue offsetFactor;
         public SerializedShaderFloatValue offsetUnits;
         public SerializedShaderFloatValue alphaToMask;
@@ -239,6 +250,10 @@ namespace AssetStudio
             zTest = new SerializedShaderFloatValue(reader);
             zWrite = new SerializedShaderFloatValue(reader);
             culling = new SerializedShaderFloatValue(reader);
+            if (version[0] >= 2020) //2020.1 and up
+            {
+                conservative = new SerializedShaderFloatValue(reader);
+            }
             offsetFactor = new SerializedShaderFloatValue(reader);
             offsetUnits = new SerializedShaderFloatValue(reader);
             alphaToMask = new SerializedShaderFloatValue(reader);
@@ -357,11 +372,18 @@ namespace AssetStudio
     {
         public int m_NameIndex;
         public int m_Index;
+        public int m_ArraySize;
 
-        public BufferBinding(BinaryReader reader)
+        public BufferBinding(ObjectReader reader)
         {
+            var version = reader.version;
+
             m_NameIndex = reader.ReadInt32();
             m_Index = reader.ReadInt32();
+            if (version[0] >= 2020) //2020.1 and up
+            {
+                m_ArraySize = reader.ReadInt32();
+            }
         }
     }
 
@@ -447,7 +469,12 @@ namespace AssetStudio
         kShaderGpuProgramMetalVS = 23,
         kShaderGpuProgramMetalFS = 24,
         kShaderGpuProgramSPIRV = 25,
-        kShaderGpuProgramConsole = 26
+        kShaderGpuProgramConsoleVS = 26,
+        kShaderGpuProgramConsoleFS = 27,
+        kShaderGpuProgramConsoleHS = 28,
+        kShaderGpuProgramConsoleDS = 29,
+        kShaderGpuProgramConsoleGS = 30,
+        kShaderGpuProgramRayTracing = 31,
     };
 
     public class SerializedSubProgram
@@ -582,6 +609,10 @@ namespace AssetStudio
 
     public class SerializedPass
     {
+        public Hash128[] m_EditorDataHash;
+        public byte[] m_Platforms;
+        public ushort[] m_LocalKeywordMask;
+        public ushort[] m_GlobalKeywordMask;
         public KeyValuePair<string, int>[] m_NameIndices;
         public PassType m_Type;
         public SerializedShaderState m_State;
@@ -591,6 +622,7 @@ namespace AssetStudio
         public SerializedProgram progGeometry;
         public SerializedProgram progHull;
         public SerializedProgram progDomain;
+        public SerializedProgram progRayTracing;
         public bool m_HasInstancingVariant;
         public string m_UseName;
         public string m_Name;
@@ -600,6 +632,23 @@ namespace AssetStudio
         public SerializedPass(ObjectReader reader)
         {
             var version = reader.version;
+
+            if (version[0] > 2020 || (version[0] == 2020 && version[1] >= 2)) //2020.2 and up
+            {
+                int numEditorDataHash = reader.ReadInt32();
+                m_EditorDataHash = new Hash128[numEditorDataHash];
+                for (int i = 0; i < numEditorDataHash; i++)
+                {
+                    m_EditorDataHash[i] = new Hash128(reader);
+                }
+                reader.AlignStream();
+                m_Platforms = reader.ReadUInt8Array();
+                reader.AlignStream();
+                m_LocalKeywordMask = reader.ReadUInt16Array();
+                reader.AlignStream();
+                m_GlobalKeywordMask = reader.ReadUInt16Array();
+                reader.AlignStream();
+            }
 
             int numIndices = reader.ReadInt32();
             m_NameIndices = new KeyValuePair<string, int>[numIndices];
@@ -616,6 +665,10 @@ namespace AssetStudio
             progGeometry = new SerializedProgram(reader);
             progHull = new SerializedProgram(reader);
             progDomain = new SerializedProgram(reader);
+            if (version[0] > 2019 || (version[0] == 2019 && version[1] >= 3)) //2019.3 and up
+            {
+                progRayTracing = new SerializedProgram(reader);
+            }
             m_HasInstancingVariant = reader.ReadBoolean();
             if (version[0] >= 2018) //2018 and up
             {
@@ -759,20 +812,29 @@ namespace AssetStudio
             {
                 m_ParsedForm = new SerializedShader(reader);
                 platforms = reader.ReadUInt32Array().Select(x => (ShaderCompilerPlatform)x).ToArray();
-                offsets = reader.ReadUInt32Array();
-                compressedLengths = reader.ReadUInt32Array();
-                decompressedLengths = reader.ReadUInt32Array();
-                compressedBlob = reader.ReadBytes(reader.ReadInt32());
+                if (version[0] > 2019 || (version[0] == 2019 && version[1] >= 3)) //2019.3 and up
+                {
+                    offsets = reader.ReadUInt32ArrayArray().Select(x => x[0]).ToArray();
+                    compressedLengths = reader.ReadUInt32ArrayArray().Select(x => x[0]).ToArray();
+                    decompressedLengths = reader.ReadUInt32ArrayArray().Select(x => x[0]).ToArray();
+                }
+                else
+                {
+                    offsets = reader.ReadUInt32Array();
+                    compressedLengths = reader.ReadUInt32Array();
+                    decompressedLengths = reader.ReadUInt32Array();
+                }
+                compressedBlob = reader.ReadUInt8Array();
             }
             else
             {
-                m_Script = reader.ReadBytes(reader.ReadInt32());
+                m_Script = reader.ReadUInt8Array();
                 reader.AlignStream();
                 var m_PathName = reader.ReadAlignedString();
                 if (version[0] == 5 && version[1] >= 3) //5.3 - 5.4
                 {
                     decompressedSize = reader.ReadUInt32();
-                    m_SubProgramBlob = reader.ReadBytes(reader.ReadInt32());
+                    m_SubProgramBlob = reader.ReadUInt8Array();
                 }
             }
         }

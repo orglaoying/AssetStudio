@@ -72,11 +72,6 @@ namespace AssetStudio
             return new Vector4(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
         }
 
-        public static System.Drawing.RectangleF ReadRectangleF(this BinaryReader reader)
-        {
-            return new System.Drawing.RectangleF(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
-        }
-
         public static Color ReadColor4(this BinaryReader reader)
         {
             return new Color(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
@@ -102,6 +97,11 @@ namespace AssetStudio
             return ReadArray(reader.ReadBoolean, reader.ReadInt32());
         }
 
+        public static byte[] ReadUInt8Array(this BinaryReader reader)
+        {
+            return reader.ReadBytes(reader.ReadInt32());
+        }
+
         public static ushort[] ReadUInt16Array(this BinaryReader reader)
         {
             return ReadArray(reader.ReadUInt16, reader.ReadInt32());
@@ -120,6 +120,11 @@ namespace AssetStudio
         public static uint[] ReadUInt32Array(this BinaryReader reader)
         {
             return ReadArray(reader.ReadUInt32, reader.ReadInt32());
+        }
+
+        public static uint[][] ReadUInt32ArrayArray(this BinaryReader reader)
+        {
+            return ReadArray(reader.ReadUInt32Array, reader.ReadInt32());
         }
 
         public static uint[] ReadUInt32Array(this BinaryReader reader, int length)

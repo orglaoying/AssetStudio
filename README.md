@@ -7,41 +7,68 @@ AssetStudio is a tool for exploring, extracting and exporting assets and assetbu
 
 ## Features
 * Support version:
-  * 2.5 - 2019.1
+  * 2.5 - 2020.2
 * Support asset types:
-  * **Texture2D** : support convert to bmp, png or jpeg. export to containers: DDS, PVR and KTX
-  * **Sprite** : bmp, png or jpeg
+  * **Texture2D** : convert to png, tga, jpeg, bmp
+  * **Sprite** : crop Texture2D to png, tga, jpeg, bmp
   * **AudioClip** : mp3, ogg, wav, m4a, fsb. support convert FSB file to WAV(PCM)
-  * **Font**
+  * **Font** : ttf, otf
   * **Mesh** : obj
   * **TextAsset**
   * **Shader**
   * **MovieTexture**
   * **VideoClip**
-  * **MonoBehaviour**
+  * **MonoBehaviour** : json
   * **Animator** : export to FBX file with bound AnimationClip
 
+## Requirements
+
+- [.NET Framework 4.7.2](https://dotnet.microsoft.com/download/dotnet-framework/net472)
+
 ## Usage
-### Requirements
 
-- [.NET Framework 4.0](https://www.microsoft.com/en-us/download/details.aspx?id=17718)
-- [Microsoft Visual C++ 2013 Redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=40784)
-- [Microsoft Visual C++ 2015 Redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=53840)
+### Load Assets/AssetBundles
 
-### How to use
+Use **File-Load file** or **File-Load folder**.
 
-* Use **File-Load file**, **File-Load folder** to load assets or assetbundles from multiple files or folder  
-* Use **File-Extract file**, **File-Extract folder** to export assetbundles to assets from multiple files or folder  
-* Export assets: use **Export** menu  
-* Export model:  
-  * Export model from "Scene Hierarchy" using the **Model** menu  
-  * Export Animator from "Asset List" using the **Export** menu  
-  * With AnimationClip:
-    * Select model from "Scene Hierarchy" then select the AnimationClip from "Asset List", using **Model-Export selected objects with AnimationClip** to export
-    * Export Animator will export bound AnimationClip or use **Ctrl** to select Animator and AnimationClip from "Asset List", using **Export-Export Animator with selected AnimationClip** to export
-  
+When AssetStudio loads AssetBundles, it decompresses and reads it directly in memory, which may cause a large amount of memory to be used. You can use **File-Extract file** or **File-Extract folder** to extract AssetBundles to another folder, and then read.
+
+### Extract/Decompress AssetBundles
+
+Use **File-Extract file** or **File-Extract folder**.
+
+### Export Assets
+
+use **Export** menu.
+
+### Export Model
+
+Export model from "Scene Hierarchy" using the **Model** menu.
+
+Export Animator from "Asset List" using the **Export** menu.
+
+#### With AnimationClip
+
+Select model from "Scene Hierarchy" then select the AnimationClip from "Asset List", using **Model-Export selected objects with AnimationClip** to export.
+
+Export Animator will export bound AnimationClip or use **Ctrl** to select Animator and AnimationClip from "Asset List", using **Export-Export Animator with selected AnimationClip** to export.
+
+### Export MonoBehaviour
+
+When you select an asset of the MonoBehaviour type for the first time, AssetStudio will ask you the directory where the assembly is located, please select the directory where the assembly is located, such as the `Managed` folder.
+
+#### For Il2Cpp
+
+First, use my other program [Il2CppDumper](https://github.com/Perfare/Il2CppDumper) to generate dummy dll, then when using AssetStudio to select the assembly directory, select the dummy dll folder.
+
 ## Build
 
-* The project uses some C# 7 syntax, need Visual Studio 2017 or newer
-* **AssetStudioFBX** uses FBX SDK 2019.0 VS2015, before building, you need to install the FBX SDK and modify the project file, change include directory and library directory to point to the FBX SDK directory
-* If you want to change the FBX SDK version, you need to replace `libfbxsdk.dll` which in `AssetStudioGUI/Libraries/x86/` and `AssetStudioGUI/Libraries/x64` directory to the new version
+* Visual Studio 2019 or newer
+* **AssetStudioFBXNative** uses FBX SDK 2020.0.1 VS2017, before building, you need to install the FBX SDK and modify the project file, change include directory and library directory to point to the FBX SDK directory
+
+## Open source libraries used
+
+### Texture2DDecoder
+* [Ishotihadus/mikunyan](https://github.com/Ishotihadus/mikunyan)
+* [BinomialLLC/crunch](https://github.com/BinomialLLC/crunch)
+* [Unity-Technologies/crunch](https://github.com/Unity-Technologies/crunch/tree/unity)
